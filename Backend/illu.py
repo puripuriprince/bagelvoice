@@ -1,25 +1,52 @@
+print("Starting imports...")
+
+print("Importing fastrtc...")
 from fastrtc                import Stream, StreamHandler, WebRTC
 from fastrtc.tracks         import EmitType
-from silero_vad             import load_silero_vad
-from distil_whisper_fastrtc import DistilWhisperSTT, get_stt_model
-from openai                 import OpenAI
-from generator              import load_csm_1b, Segment
+print("fastrtc imported successfully")
 
+print("Importing silero_vad...")
+from silero_vad             import load_silero_vad
+print("silero_vad imported successfully")
+
+print("Importing distil_whisper_fastrtc...")
+from distil_whisper_fastrtc import DistilWhisperSTT, get_stt_model
+print("distil_whisper_fastrtc imported successfully")
+
+print("Importing OpenAI...")
+from openai                 import OpenAI
+print("OpenAI imported successfully")
+
+print("Importing generator...")
+from generator              import load_csm_1b, Segment
+print("generator imported successfully")
+
+print("Importing standard libraries...")
 from typing      import Generator, cast
 from queue       import Queue, Empty, Full
 from threading   import Thread
 from functools   import reduce
 from dataclasses import dataclass
+print("Standard libraries imported successfully")
 
+print("Importing third-party libraries...")
+print("Importing gradio...")
 import gradio as gr
+print("Importing numpy...")
 import numpy  as np
+print("Importing torch...")
 import torch
+print("Importing torchaudio...")
 import torchaudio
+print("Importing click...")
 import click
+print("Importing system libraries...")
 import time
 import os
 import sys
-import operator
+print("All third-party and system libraries imported successfully")
+
+print("All imports completed successfully!")
 
 
 def load_audio_file(path, rate = 24000):
@@ -269,7 +296,7 @@ if __name__ == "__main__":
 
     # LLM: figure out what to say
     # TODO: warmup (ctx caching)
-    api_key   = os.environ.get("OPENAI_API_KEY")  or "eyy_lmao"
+    api_key = "your-api-key-here"  # Replace with your actual OpenAI API key
     api_base  = os.environ.get("OPENAI_BASE_URL") or "http://127.0.0.1:8000/v1"
     llm = OpenAI(api_key=api_key, base_url=api_base)
 

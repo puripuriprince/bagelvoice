@@ -4,7 +4,7 @@ from typing import List, Tuple
 import torch
 import torchaudio
 from huggingface_hub import hf_hub_download
-from models import Model
+from models import Model, ModelArgs
 from moshi.models import loaders
 from tokenizers.processors import TemplateProcessing
 from transformers import AutoTokenizer
@@ -155,7 +155,16 @@ class Generator:
 
 
 def load_csm_1b(device: str = "cuda") -> Generator:
-    model = Model.from_pretrained("sesame/csm-1b")
+    # Add the required configuration
+    config = ModelArgs(
+        backbone_flavor="llama-1B",
+        decoder_flavor="llama-100M",
+        text_vocab_size=32000,  # Standard size for most LLaMA tokenizers
+        audio_vocab_size=1024,  # Standard for audio tokenization
+        audio_num_codebooks=32  # Number of codebooks for audio encoding
+    )
+    
+    model = Model.from_pretrained("sesame/csm-1b", config=config)
     model.to(device=device, dtype=torch.bfloat16)
     model.decoder = torch.compile(model.decoder, fullgraph=True, mode='reduce-overhead')
 
