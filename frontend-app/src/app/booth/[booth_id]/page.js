@@ -16,6 +16,8 @@ import {
 	DocumentPlusIcon,
 	MicrophoneIcon,
 } from "@heroicons/react/24/outline";
+import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
+
 import { NewspaperIcon, PaperclipIcon, PhoneIcon } from "lucide-react";
 import SourceList from "./SourceList";
 import { useParams, useRouter } from "next/navigation";
@@ -23,6 +25,7 @@ import useBoothStore from "@/stores/useBoothStore";
 import ImportDocument from "./ImportDocument";
 import ImportText from "./ImportText";
 import ImportMicrophone from "./ImportMicrophone";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -69,7 +72,15 @@ export default function BoothPage() {
 						)}
 					</div>
 				</div>
-				<div className="grow"></div>
+				<div className="grow flex flex-col">
+					<div className="grow"></div>
+					<div className="min-h-10 w-full p-4 flex gap-2">
+						<Textarea className="grow h-full" />
+						<Button className={"w-20 h-full"}>
+							<PaperAirplaneIcon className="w-6 h-6" />
+						</Button>
+					</div>
+				</div>
 				<div className="border-s p-6 min-w-xs">
 					<div className="font-bold text-xl">
 						<h2 className="font-bold text-xl flex items-center gap-2">
