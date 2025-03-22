@@ -30,6 +30,18 @@ const useSourcesStore = create(set => ({
 				source.id === id ? { ...source, selected: checked } : source,
 			),
 		})),
+	renameSource: async (id, name) => {
+		set(state => ({
+			sources: state.sources.map(source =>
+				source.id === id ? { ...source, name } : source,
+			),
+		}));
+	},
+	deleteSource: async id => {
+		set(state => ({
+			sources: state.sources.filter(source => source.id !== id),
+		}));
+	},
 }));
 
 export default useSourcesStore;

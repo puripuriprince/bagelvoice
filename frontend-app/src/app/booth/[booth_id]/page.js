@@ -57,7 +57,7 @@ export default function BoothPage() {
 				{booth.name}
 			</h1>
 			<div className="flex grow">
-				<div className="border-e w-xs">
+				<div className="border-e min-w-xs w-xs">
 					<div className="flex items-center justify-between ps-6 pe-3 py-3 border-b">
 						<h2 className="font-bold text-xl flex items-center gap-2">
 							<PaperclipIcon className="w-6 h-6 " />
@@ -89,15 +89,29 @@ export default function BoothPage() {
 					</div>
 				</div>
 				<div className="grow flex flex-col">
-					<div className="grow"></div>
+					<div className="px-4 pt-4 grow">
+						<div
+							className="border rounded-lg w-full overflow-auto"
+							style={{
+								maxHeight: "calc(100vh - 200px)",
+							}}
+						>
+							{Array.from({ length: 200 }).map((_, i) => (
+								<div key={i} className="p-4 border-b">
+									<p>asdasd</p>
+								</div>
+							))}
+						</div>
+					</div>
+
 					<div className="min-h-10 w-full p-4 flex gap-2">
-						<Textarea className="grow h-full" />
-						<Button className={"w-20 h-full"}>
+						<Textarea className="h-full" />
+						<Button className="w-20 h-full">
 							<PaperAirplaneIcon className="w-6 h-6" />
 						</Button>
 					</div>
 				</div>
-				<div className="border-s p-6 w-xs">
+				<div className="border-s p-6 min-w-xs w-xs">
 					<div className="font-bold text-xl">
 						<h2 className="font-bold text-xl flex items-center gap-2 mb-4">
 							<PhoneIcon className="w-6 h-6 " />
@@ -122,7 +136,7 @@ export default function BoothPage() {
 										Choose your favourite tutor to call.
 									</DialogDescription>
 									{callOptions.map(option => (
-										<DialogClose asChild>
+										<DialogClose asChild key={option.name}>
 											<Card
 												className="w-full p-4 flex gap-2 items-center hover:brightness-125 duration-100 cursor-pointer"
 												onClick={setCallReceiver.bind(

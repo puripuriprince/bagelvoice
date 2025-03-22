@@ -9,13 +9,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog } from "@/components/ui/dialog";
+import ItemRename from "./ItemRename";
+import ItemDelete from "./ItemDelete";
 
 export default function SourceItem({ source }) {
 	const setSourceChecked = useSourcesStore(state => state.setSourceChecked);
-
-	function handleQuickView() {}
-	function handleRename() {}
-	function handleDelete() {}
 
 	return (
 		<div className="flex justify-between items-center">
@@ -40,14 +39,8 @@ export default function SourceItem({ source }) {
 						<EyeIcon size={16} />
 						Quick View
 					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<PencilIcon size={16} />
-						Rename
-					</DropdownMenuItem>
-					<DropdownMenuItem className={"text-red-500 font-semibold"}>
-						<TrashIcon size={16} className="text-red-500" />
-						Delete
-					</DropdownMenuItem>
+					<ItemRename source={source} />
+					<ItemDelete source={source} />
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</div>
