@@ -84,7 +84,7 @@ export default function BoothItem({ booth }) {
 					</AlertDialogContent>
 				</AlertDialog>
 
-				<AlertDialog onOpenChange={x => !x && setBoothNameInput("")}>
+				<AlertDialog>
 					<AlertDialogTrigger asChild>
 						<Button
 							variant={"destructive"}
