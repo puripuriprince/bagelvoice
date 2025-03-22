@@ -5,12 +5,12 @@
  * It shows a header with title, add button, and the list of sources.
  * When no sources are added, it displays an empty state with instructions.
  */
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { Plus, Upload, File } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import EmptyState from '@/components/common/EmptyState';
+import { Button } from "@/components/ui/button";
+import { Plus, Upload, File } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import EmptyState from "@/components/common/EmptyState";
 
 export default function SourcesPanel() {
   return (
@@ -36,7 +36,7 @@ export default function SourcesPanel() {
         <div className="mt-4">
           <Button
             variant="outline"
-            className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            className="w-full border-zinc-700 text-black hover:bg-zinc-800 hover:text-zinc-100"
           >
             <Upload size={16} className="mr-2" />
             Upload a source

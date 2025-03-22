@@ -5,15 +5,15 @@
  * It includes sections for audio overview and notes.
  * Each section can have its own functionality and empty states.
  */
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { Info, Plus, BookText, Headphones } from 'lucide-react';
-import { NotepadText } from '@/components/common/CustomIcons';
-import EmptyState from '@/components/common/EmptyState';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Button } from "@/components/ui/button";
+import { Info, Plus, BookText, Headphones } from "lucide-react";
+import { NotepadText } from "@/components/common/CustomIcons";
+import EmptyState from "@/components/common/EmptyState";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export default function StudioPanel() {
   return (
@@ -28,7 +28,9 @@ export default function StudioPanel() {
         {/* Audio Overview Section */}
         <div className="p-4 border-b border-zinc-800">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-zinc-200">Audio Overview</h3>
+            <h3 className="text-sm font-medium text-zinc-200">
+              Audio Overview
+            </h3>
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <Info size={14} className="text-zinc-400" />
               <span className="sr-only">Info</span>
@@ -39,11 +41,15 @@ export default function StudioPanel() {
           <Card className="bg-zinc-800 border-zinc-700 p-4">
             <div className="flex items-start space-x-3">
               <div className="w-8 h-8 rounded-md bg-zinc-700 flex items-center justify-center">
-                <Headphones size={16} className="text-zinc-300" />
+                <Headphones size={16} className="text-black" />
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-zinc-100">Deep Dive conversation</h4>
-                <p className="text-xs text-zinc-400 mt-1">Two hosts (English only)</p>
+                <h4 className="text-sm font-medium text-zinc-100">
+                  Deep Dive conversation
+                </h4>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Two hosts (English only)
+                </p>
 
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <Button variant="secondary" size="sm" className="h-8 text-xs">
@@ -62,7 +68,11 @@ export default function StudioPanel() {
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-zinc-200">Notes</h3>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-zinc-400"
+            >
               <svg
                 width="16"
                 height="16"
@@ -84,7 +94,7 @@ export default function StudioPanel() {
           {/* Add Note Button */}
           <Button
             variant="outline"
-            className="w-full mb-4 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            className="w-full mb-4 border-zinc-700 text-black hover:bg-zinc-800 hover:text-zinc-100"
           >
             <Plus size={16} className="mr-2" />
             Add note
@@ -94,7 +104,7 @@ export default function StudioPanel() {
           <div className="grid grid-cols-2 gap-2 mb-4">
             <Button
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 justify-start"
+              className="border-zinc-700 text-black hover:bg-zinc-800 hover:text-zinc-100 justify-start"
               size="sm"
             >
               <BookText size={14} className="mr-2" />
@@ -102,7 +112,7 @@ export default function StudioPanel() {
             </Button>
             <Button
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 justify-start"
+              className="border-zinc-700 text-black hover:bg-zinc-800 justify-start hover:text-zinc-100"
               size="sm"
             >
               <NotepadText size={14} className="mr-2" />
@@ -113,7 +123,7 @@ export default function StudioPanel() {
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 justify-start"
+              className="border-zinc-700 text-black hover:bg-zinc-800 justify-start hover:text-zinc-100"
               size="sm"
             >
               <BookText size={14} className="mr-2" />
@@ -121,7 +131,7 @@ export default function StudioPanel() {
             </Button>
             <Button
               variant="outline"
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 justify-start"
+              className="border-zinc-700 text-black hover:bg-zinc-800 justify-start hover:text-zinc-100"
               size="sm"
             >
               <NotepadText size={14} className="mr-2" />
