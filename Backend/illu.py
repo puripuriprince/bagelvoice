@@ -4,6 +4,8 @@ from silero_vad             import load_silero_vad
 from distil_whisper_fastrtc import DistilWhisperSTT, get_stt_model
 from openai                 import OpenAI
 from generator              import load_csm_1b, Segment
+from csm_twindecoders.csm_mlx.models import CSM, csm_1b
+#from  csm_twindecoders.csm_mlx.faster_decoder.test import CSM, csm_1b
 
 from typing      import Generator, cast
 from queue       import Queue, Empty, Full
@@ -14,7 +16,7 @@ from dataclasses import dataclass
 import gradio as gr
 import numpy  as np
 import torch
-import torchaudio
+import torchaudio  ## mlx
 import click
 import time
 import os
@@ -274,7 +276,7 @@ if __name__ == "__main__":
     llm = OpenAI(api_key=api_key, base_url=api_base)
 
     # CSM: figure out how to say it
-    csm = load_csm_1b(device="cuda")
+    csm = CSM(csm_1b())
     stderr(click.style("INFO", fg="green") + ":\t  Warming up CSM model.\n")
     list(csm.generate(text="Warming up CSM!", speaker=0, context=bootleg_maya))
     stderr(click.style("INFO", fg="green") + ":\t  CSM model warmed up.\n")
