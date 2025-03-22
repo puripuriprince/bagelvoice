@@ -15,6 +15,7 @@ import {
 	DocumentIcon,
 	DocumentPlusIcon,
 	MicrophoneIcon,
+	PhoneArrowUpRightIcon,
 } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
@@ -26,6 +27,19 @@ import ImportDocument from "./ImportDocument";
 import ImportText from "./ImportText";
 import ImportMicrophone from "./ImportMicrophone";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import useCallStore, { callOptions } from "@/stores/useCallStore";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+	DialogTrigger,
+	DialogHeader,
+	DialogClose,
+} from "@/components/ui/dialog";
+import { Card, CardTitle } from "@/components/ui/card";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -33,6 +47,8 @@ export default function BoothPage() {
 	const booth = useBoothStore(state =>
 		state.booths.find(x => x.id === parseInt(booth_id)),
 	);
+	const callReceiver = useCallStore(state => state.callReceiver);
+	const setCallReceiver = useCallStore(state => state.setCallReceiver);
 
 	return (
 		<div className="h-full flex flex-col">
@@ -81,12 +97,60 @@ export default function BoothPage() {
 						</Button>
 					</div>
 				</div>
-				<div className="border-s p-6 min-w-xs">
+				<div className="border-s p-6 w-xs">
 					<div className="font-bold text-xl">
-						<h2 className="font-bold text-xl flex items-center gap-2">
+						<h2 className="font-bold text-xl flex items-center gap-2 mb-4">
 							<PhoneIcon className="w-6 h-6 " />
 							Voice Call
 						</h2>
+						<Label>Call Receiver</Label>
+						<Dialog>
+							<DialogTrigger asChild>
+								<Button
+									className="w-full mt-2"
+									variant={"outline"}
+								>
+									{callReceiver}
+								</Button>
+							</DialogTrigger>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>
+										Change Call Receiver
+									</DialogTitle>
+									<DialogDescription>
+										Choose your favourite tutor to call.
+									</DialogDescription>
+									{callOptions.map(option => (
+										<DialogClose asChild>
+											<Card
+												className="w-full p-4 flex gap-2 items-center hover:brightness-125 duration-100 cursor-pointer"
+												onClick={setCallReceiver.bind(
+													this,
+													option.name,
+												)}
+											>
+												<CardTitle>
+													{option.name}
+												</CardTitle>
+												<p className="text-white/50 text-center">
+													{option.description}
+												</p>
+											</Card>
+										</DialogClose>
+									))}
+								</DialogHeader>
+							</DialogContent>
+						</Dialog>
+						<p className="text-sm font-normal text-white/50 mt-2">
+							James is a casual teacher who takes teaching
+							seriously. He will make sure that you understand the
+							topics
+						</p>
+						<Button className="w-full mt-4 flex gap-3 items-center">
+							<PhoneArrowUpRightIcon className="w-6 h-6" />
+							Start Call
+						</Button>
 					</div>
 				</div>
 			</div>
