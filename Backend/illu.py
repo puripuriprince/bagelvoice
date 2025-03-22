@@ -26,6 +26,7 @@ from typing      import Generator, cast
 from queue       import Queue, Empty, Full
 from threading   import Thread
 from functools   import reduce
+import operator
 from dataclasses import dataclass
 print("Standard libraries imported successfully")
 
@@ -296,8 +297,8 @@ if __name__ == "__main__":
 
     # LLM: figure out what to say
     # TODO: warmup (ctx caching)
-    api_key = "your-api-key-here"  # Replace with your actual OpenAI API key
-    api_base  = os.environ.get("OPENAI_BASE_URL") or "http://127.0.0.1:8000/v1"
+    api_key = ""  # Replace with your actual OpenAI API key
+    api_base  = "https://openrouter.ai/api/v1"
     llm = OpenAI(api_key=api_key, base_url=api_base)
 
     # CSM: figure out how to say it
@@ -310,7 +311,7 @@ if __name__ == "__main__":
         system = f.read()
 
     # gg
-    api_model = os.environ.get("OPENAI_MODEL")    or "co-2"
+    api_model = "mistralai/mistral-small-3.1-24b-instruct"
     chat = Chat(stt, llm, csm, llm_model=api_model, system=system)
 
     # TODO: gradio shit

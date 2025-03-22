@@ -103,8 +103,19 @@ class Model(
     pipeline_tag="text-to-speech",
     license="apache-2.0",
 ):
-    def __init__(self, config: ModelArgs):
+    def __init__(self, config: ModelArgs = None):
         super().__init__()
+        
+        # If config is None, create default config
+        if config is None:
+            config = ModelArgs(
+                backbone_flavor="llama-1B",
+                decoder_flavor="llama-100M",
+                text_vocab_size=32000,
+                audio_vocab_size=1024,
+                audio_num_codebooks=32
+            )
+            
         self.config = config
 
         self.backbone, backbone_dim = _prepare_transformer(FLAVORS[config.backbone_flavor]())
@@ -116,6 +127,74 @@ class Model(
         self.projection = nn.Linear(backbone_dim, decoder_dim, bias=False)
         self.codebook0_head = nn.Linear(backbone_dim, config.audio_vocab_size, bias=False)
         self.audio_head = nn.Parameter(torch.empty(config.audio_num_codebooks - 1, decoder_dim, config.audio_vocab_size))
+
+    @classmethod
+    def from_pretrained(cls, model_id, **kwargs):
+        print(f"Loading model from {model_id}")
+        
+        # First try to get any config from the kwargs
+        config = kwargs.pop('config', None)
+        
+        # If no config provided, use the known correct values
+        if config is None:
+            print("No config provided, using known correct configuration...")
+            
+            # Use the values from the config.json provided by the user
+            config = ModelArgs(
+                backbone_flavor="llama-1B",
+                decoder_flavor="llama-100M",
+                text_vocab_size=128256,
+                audio_vocab_size=2051,
+                audio_num_codebooks=32
+            )
+            print(f"Created config with: {config.__dict__}")
+            
+            # Try to verify against the model repo as a double-check
+            try:
+                from huggingface_hub import hf_hub_download
+                import json
+                
+                print(f"Attempting to download config from {model_id}...")
+                try:
+                    config_path = hf_hub_download(model_id, "config.json")
+                    with open(config_path, 'r') as f:
+                        config_dict = json.load(f)
+                    print(f"Downloaded config: {config_dict}")
+                    
+                    # Just verify the values match, don't actually use them
+                    if 'args' in config_dict:
+                        args = config_dict['args']
+                        print(f"Verifying config values match expected values...")
+                        if (args.get('text_vocab_size') != config.text_vocab_size or
+                            args.get('audio_vocab_size') != config.audio_vocab_size or
+                            args.get('audio_num_codebooks') != config.audio_num_codebooks):
+                            print(f"Warning: Config mismatch between hardcoded values and repo values")
+                            print(f"Repo: {args}")
+                            print(f"Hardcoded: {config.__dict__}")
+                except Exception as e:
+                    print(f"Couldn't download or parse config.json: {e}")
+                    print("Continuing with hardcoded values")
+            except Exception as e:
+                print(f"Error during config verification: {e}")
+                print("Continuing with hardcoded values")
+        else:
+            print(f"Using provided config: {config.__dict__}")
+        
+        # Pass the config to the constructor and call the parent's from_pretrained
+        kwargs['config'] = config
+        
+        # Add debugging to the actual loading process
+        print("Starting model loading...")
+        try:
+            model = super().from_pretrained(model_id, **kwargs)
+            print("Model loaded successfully!")
+            return model
+        except Exception as e:
+            print(f"Error loading model: {e}")
+            # More detailed debug info
+            import traceback
+            traceback.print_exc()
+            raise
 
     def setup_caches(self, max_batch_size: int) -> torch.Tensor:
         """Setup KV caches and return a causal mask."""
