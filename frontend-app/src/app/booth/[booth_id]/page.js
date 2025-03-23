@@ -75,34 +75,58 @@ export default function BoothPage() {
 	const [isCallActive, setIsCallActive] = useState(false);
 	const mediaRecorderRef = useRef(null);
 	const streamRef = useRef(null);
+	const [startClicked, setStartClicked] = useState(false);
 
 	function handleStartStudying() {
-		// TODO: Fetch the summary from the sources
-		setTimeout(() => {
-			setChatSummary(
-				`
-Deadlocks Summary:
+		setStartClicked(true);
+		// Get all the summaries from your sources
+		const sources = useSourcesStore.getState().sources;
 
-* **Liveness**: A system must ensure that processes make progress. Indefinite waiting (like waiting for a mutex or semaphore forever) is a liveness failure.
+		if (sources.length === 0) {
+			alert("Please upload some files first");
+			return;
+		}
 
-* **Deadlock**: Happens when two or more processes wait indefinitely for an event that only one of them can trigger. Example:
+		const summaries = sources
+			.filter(source => source.selected)
+			.map(source => source.summary);
 
-  * $P_{0}$ locks $S$ and waits for $Q$.
+		// Optional: Show loading state
+		// setIsLoading(true);
 
-  * $P_{1}$ locks $Q$ and waits for $S$.
+		fetch("http://localhost:8080/meta-summarize", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				summaries: summaries,
+				title: "Study Materials",
+			}),
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				// Set the chat summary with the meta-summary from the backend
+				setChatSummary(data.meta_summary);
+				setIsStarted(true);
+			})
+			.catch(error => {
+				console.error("Error generating study summary:", error);
+				alert(
+					"Failed to generate study summary. See console for details.",
+				);
 
-  * Neither can proceed, causing a deadlock.
-
-* Other related issues:
-
-  * **Starvation**: A process may never get a needed resource if others keep taking priority.
-
-  * **Priority Inversion**: A high-priority process gets blocked because a lower-priority process holds a required lock. Solved using priority inheritance.
-`.trim(),
-			);
-		}, 1000);
-
-		setIsStarted(true);
+				// Fallback to starting anyway without a summary
+				setIsStarted(true);
+			});
+		// .finally(() => {
+		//   setIsLoading(false);
+		// });
 	}
 
 	const [chatBoxInput, setChatBoxInput] = useState("");
@@ -110,32 +134,67 @@ Deadlocks Summary:
 	function handleSendMessage() {
 		if (chatBoxInput === "") return;
 
+		// Add user message to the chat
 		addMessage("Me", chatBoxInput);
+
+		// Get the question from input
+		const question = chatBoxInput;
+
+		// Clear input field
 		setChatBoxInput("");
-		setTimeout(() => {
-			streamMessage(
-				"James",
-				`
-Alright! Imagine you and your friend are playing with toy cars. You each have one car, but you both want the same second car to complete your race.
 
-* You are holding Car A and waiting for Car B.
+		// Get all sources or just selected sources if you have a selection mechanism
+		const sources = useSourcesStore.getState().sources;
+		// If you have a way to track selected sources, use that instead
+		// const selectedSources = sources.filter(source => selectedSourceIds.includes(source.id));
 
-* Your friend is holding Car B and waiting for Car A.
-
-But neither of you wants to let go of your car first! So now, both of you are stuck, unable to play. This is a deadlock—no one can move forward because each person is waiting for something the other won't give up.
-
-In computers, this happens when different programs or processes are waiting for resources (like memory, files, or devices) that another process is holding, and no one can continue.
-
-This can be represented mathematically as:
-
-$P_1$ holds $R_1$ and requests $R_2$
-$P_2$ holds $R_2$ and requests $R_1$
-
-Creating a circular wait condition: $P_1 \\rightarrow R_2 \\rightarrow P_2 \\rightarrow R_1 \\rightarrow P_1$
-`.trim(),
-				"/sample-video.mp4",
-			);
-		}, 2000);
+		// Show loading state if needed
+		// setIsLoading(true);
+		console.log(callOptions.find(x => x.name === callReceiver).description);
+		// Call your backend API
+		fetch("http://localhost:8080/answer-question", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				question: question,
+				summaries: sources.map(source => ({
+					id: source.id,
+					name: source.name,
+					summary: source.summary,
+				})),
+				personality: callOptions.find(x => x.name === callReceiver)
+					.description,
+			}),
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				// Stream the AI's answer with references
+				addMessage(callReceiver, data.answer);
+				//streamMessage(
+				//	"James",
+				//	data.answer,
+				//	//"/sample-video.mp4", // Keep your video if needed
+				//	data.references, // Pass references for citation linking
+				//);
+			})
+			.catch(error => {
+				console.error("Error getting answer:", error);
+				// Handle error - add an error message to the chat
+				addMessage(
+					"System",
+					"Sorry, I couldn't generate an answer at this time. Please try again.",
+				);
+			});
+		// .finally(() => {
+		//   setIsLoading(false);
+		// });
 	}
 
 	// Function to toggle microphone for call
@@ -263,6 +322,7 @@ Creating a circular wait condition: $P_1 \\rightarrow R_2 \\rightarrow P_2 \\rig
 									<Button
 										className={"w-full mt-4"}
 										onClick={handleStartStudying}
+										disabled={startClicked}
 									>
 										Start Studying
 									</Button>
