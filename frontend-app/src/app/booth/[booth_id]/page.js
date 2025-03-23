@@ -176,7 +176,7 @@ export default function BoothPage() {
 			})
 			.then(data => {
 				// Stream the AI's answer with references
-				addMessage(callReceiver, data.answer);
+				addMessage(callReceiver, data.answer, data.video);
 				//streamMessage(
 				//	"James",
 				//	data.answer,

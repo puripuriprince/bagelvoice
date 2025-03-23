@@ -1,11 +1,14 @@
 import base64
 import datetime
+import json
 import os
+import subprocess
+import threading
 import uuid
 
 import dotenv
 import PyPDF2
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from openai import OpenAI
 
@@ -21,9 +24,11 @@ app = Flask(__name__)
 # Configure CORS to allow requests from any origin
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Ensure files directory exists
+# Ensure directories exist
 FILES_DIR = "files"
+VIDEOS_DIR = "static/videos"
 os.makedirs(FILES_DIR, exist_ok=True)
+os.makedirs(VIDEOS_DIR, exist_ok=True)
 
 
 # PDF parsing function
@@ -62,6 +67,79 @@ def generate_summary(text):
         ],
     )
     return response.choices[0].message.content
+
+
+# Check if a question requires a video explanation
+def check_video_requirement(question):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that determines if a question would benefit from a video explanation.",
+            },
+            {
+                "role": "user",
+                "content": f"Does the following question require or would significantly benefit from a video explanation? Answer with only 'yes' or 'no'.\n\nQuestion: {question}",
+            },
+        ],
+    )
+    answer = response.choices[0].message.content.strip().lower()
+    return "yes" in answer
+
+
+# Generate Manim code for video explanation
+def generate_manim_code(question, answer):
+    response = client.chat.completions.create(
+        model="gpt-4o",  # Use a more capable model for code generation
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Generate complete, self-contained Manim code that can be executed directly to produce an educational video.",
+            },
+            {
+                "role": "user",
+                "content": f"Create Manim code to generate a short educational video explaining the following question and answer. The code should be complete and ready to run. The animation should be visually engaging and clearly explain the concept.\n\nQuestion: {question}\n\nAnswer: {answer[:1000]}",
+            },
+        ],
+    )
+    return response.choices[0].message.content
+
+
+# Function to render Manim video asynchronously
+def render_manim_video(manim_code, video_path, video_filename):
+    try:
+        # Create a temporary Python file with the Manim code
+        temp_file = f"temp_manim_{uuid.uuid4()}.py"
+        with open(temp_file, "w") as f:
+            f.write(manim_code)
+
+        # Run Manim to generate the video
+        subprocess.run(
+            ["python", "-m", "manim", temp_file, "MainScene", "-o", video_filename],
+            check=True,
+        )
+
+        # Move the generated video to the designated path
+        source_video = f"media/videos/temp_manim_{uuid.uuid4()}/1080p60/MainScene.mp4"
+        if os.path.exists(source_video):
+            os.rename(source_video, video_path)
+
+        # Clean up the temporary file
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+
+    except Exception as e:
+        print(f"Error generating video: {str(e)}")
+        # Create an error log file
+        with open(f"{video_path}.error.log", "w") as f:
+            f.write(f"Error generating video: {str(e)}\n\nManim Code:\n{manim_code}")
+
+
+# Serve static files
+@app.route("/static/videos/<path:filename>")
+def serve_video(filename):
+    return send_from_directory(VIDEOS_DIR, filename)
 
 
 @app.route("/summarize", methods=["GET"])
@@ -297,8 +375,21 @@ def answer_question():
 
     question = data["question"]
     summaries = data["summaries"]
-    personality = data["personality"]
-    print(personality)
+    personality = data.get("personality", "helpful and informative")
+
+    # Check if the question would benefit from a video explanation
+    needs_video = check_video_requirement(question)
+
+    # Create a video ID and path if a video is needed
+    video_id = None
+    video_url = None
+
+    if needs_video:
+        video_id = str(uuid.uuid4())
+        video_filename = f"{video_id}.mp4"
+        video_path = os.path.join(VIDEOS_DIR, video_filename)
+        video_url = f"/static/videos/{video_filename}"
+
     # Create context from summaries
     context = "I'll provide you with summaries of several documents. Based on this information, please answer the question that follows.\n\n"
 
@@ -322,13 +413,16 @@ def answer_question():
     context += f"Question: {question}\n\n"
     context += "Please provide a comprehensive answer based solely on the information provided in these document summaries. "
     context += "Include specific references to the documents using the format [Document Name] where 'Document Name' is the exact name of the document. "
-    context += "When you cite information from a specific document, make it clear which document it came from."
+    context += "When you cite information from a specific document, make it clear which document it came from. "
     context += f"This is your response tone: {personality}"
+
+    # Select model based on whether a video is needed
+    model = "gpt-4o" if needs_video else "gpt-4o-mini"
 
     try:
         # Generate answer using OpenAI
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # or another appropriate model
+            model=model,
             messages=[
                 {
                     "role": "system",
@@ -351,14 +445,25 @@ def answer_question():
                         "name": doc_name,
                     }
 
-        return jsonify(
-            {
-                "answer": answer,
-                "question": question,
-                "document_count": len(summaries),
-                "references": references,
-            }
-        )
+        result = {
+            "answer": answer,
+            "question": question,
+            "document_count": len(summaries),
+            "references": references,
+        }
+
+        # Add video URL to response if a video is needed
+        if needs_video and video_url:
+            result["video"] = f"http://localhost:8080{video_url}"
+
+            # Start video generation in a background thread
+            def generate_video_async():
+                manim_code = generate_manim_code(question, answer)
+                render_manim_video(manim_code, video_path, video_filename)
+
+            threading.Thread(target=generate_video_async).start()
+
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({"error": f"Failed to generate answer: {str(e)}"}), 500
