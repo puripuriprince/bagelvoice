@@ -442,7 +442,18 @@ class VectorStore:
                 chunk_id, content, metadata_str, title, doc_id, similarity = row
 
                 # Parse metadata if available
-                metadata = json.loads(metadata_str) if metadata_str else {}
+                try:
+                    if metadata_str is None:
+                        metadata = {}
+                    elif isinstance(metadata_str, dict):
+                        # Already a dictionary, no need to parse
+                        metadata = metadata_str
+                    else:
+                        # Parse JSON string into dictionary
+                        metadata = json.loads(metadata_str)
+                except Exception as e:
+                    print(f"Error parsing metadata: {e}, using empty dict")
+                    metadata = {}
 
                 results.append({
                     "chunk_id": chunk_id,
@@ -521,7 +532,18 @@ class VectorStore:
                 similarity = min(score / (len(query_terms) + 0.1), 1.0)
 
                 # Parse metadata if available
-                metadata = json.loads(metadata_str) if metadata_str else {}
+                try:
+                    if metadata_str is None:
+                        metadata = {}
+                    elif isinstance(metadata_str, dict):
+                        # Already a dictionary, no need to parse
+                        metadata = metadata_str
+                    else:
+                        # Parse JSON string into dictionary
+                        metadata = json.loads(metadata_str)
+                except Exception as e:
+                    print(f"Error parsing metadata: {e}, using empty dict")
+                    metadata = {}
 
                 results.append({
                     "chunk_id": chunk_id,
@@ -579,7 +601,18 @@ class VectorStore:
                 chunk_id, content, metadata_str, title = row
 
                 # Parse metadata if available
-                metadata = json.loads(metadata_str) if metadata_str else {}
+                try:
+                    if metadata_str is None:
+                        metadata = {}
+                    elif isinstance(metadata_str, dict):
+                        # Already a dictionary, no need to parse
+                        metadata = metadata_str
+                    else:
+                        # Parse JSON string into dictionary
+                        metadata = json.loads(metadata_str)
+                except Exception as e:
+                    print(f"Error parsing metadata: {e}, using empty dict")
+                    metadata = {}
 
                 results.append({
                     "chunk_id": chunk_id,
@@ -629,7 +662,18 @@ class VectorStore:
                 doc_id, title, source_path, metadata_str, created_at = row
 
                 # Parse metadata if available
-                metadata = json.loads(metadata_str) if metadata_str else {}
+                try:
+                    if metadata_str is None:
+                        metadata = {}
+                    elif isinstance(metadata_str, dict):
+                        # Already a dictionary, no need to parse
+                        metadata = metadata_str
+                    else:
+                        # Parse JSON string into dictionary
+                        metadata = json.loads(metadata_str)
+                except Exception as e:
+                    print(f"Error parsing metadata: {e}, using empty dict")
+                    metadata = {}
 
                 results.append({
                     "document_id": doc_id,

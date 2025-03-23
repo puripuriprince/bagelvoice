@@ -11,6 +11,7 @@ import requests
 import json
 from pprint import pprint
 import time
+import uuid
 
 def test_full_pipeline(pdf_path):
     """Test the full pipeline from PDF upload to vectorized search"""
@@ -38,15 +39,18 @@ def test_full_pipeline(pdf_path):
 
     document_id = None
     with open(pdf_path, 'rb') as f:
-        files = {'file': (os.path.basename(pdf_path), f, 'application/pdf')}
-
         try:
-            print(f"Sending request to {base_url}/process-pdf...")
+            print(f"Sending request to {base_url}/api/process-document...")
             upload_start = time.time()
 
+            # Create a session ID if not provided
+            session_id = str(uuid.uuid4())
+
+            # Use form data with session_id and file
             response = requests.post(
-                f"{base_url}/process-pdf",
-                files=files
+                f"{base_url}/api/process-document",
+                files={'file': (os.path.basename(pdf_path), f, 'application/pdf')},
+                data={'session_id': session_id}
             )
 
             upload_duration = time.time() - upload_start
@@ -54,16 +58,25 @@ def test_full_pipeline(pdf_path):
             if response.status_code == 200:
                 result = response.json()
                 document_id = result.get('document_id')
+                success = result.get('success', False)
 
                 print(f"✅ Upload successful! Processed in {upload_duration:.2f} seconds")
                 print(f"Document ID: {document_id}")
+
+                if success:
+                    print(f"✅ Document was processed and added to vector store successfully!")
+                    print(f"Session ID: {session_id}")
+                else:
+                    print(f"⚠️ Document processing reported issues. Check server logs for errors.")
 
                 # Save brief upload stats
                 with open("upload_stats.json", 'w') as f:
                     json.dump({
                         "file": pdf_path,
                         "document_id": document_id,
+                        "session_id": session_id,
                         "upload_time": upload_duration,
+                        "success": success,
                         "timestamp": time.time()
                     }, f, indent=2)
 
@@ -77,9 +90,10 @@ def test_full_pipeline(pdf_path):
             print(f"❌ Error during upload: {str(e)}")
             return False
 
-    # Add a small delay to allow backend processing to complete
-    print("\nWaiting 3 seconds for processing to complete...")
-    time.sleep(3)
+    # Add a longer delay to allow backend processing to complete
+    wait_time = 25  # Increased to 15 seconds for Gemini processing
+    print(f"\nWaiting {wait_time} seconds for Gemini processing to complete...")
+    time.sleep(wait_time)
 
     # Step 2: Test search
     if document_id:
@@ -116,7 +130,8 @@ def test_full_pipeline(pdf_path):
 
             payload = {
                 'query': query,
-                'document_id': document_id
+                'document_id': document_id,
+                'session_id': session_id
             }
 
             try:
