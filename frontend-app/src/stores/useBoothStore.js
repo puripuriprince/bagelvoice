@@ -32,7 +32,7 @@ const useBoothStore = create(set => ({
 				...state.booths,
 				{
 					// TODO: make the id supplied from the backend
-					id: Math.max(...state.booths.map(b => b.id)) + 1,
+					id: parseInt(Math.random() * 100_000),
 					timestamp: new Date(),
 					source_count: 0,
 					...booth,
