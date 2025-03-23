@@ -111,6 +111,7 @@ But neither of you wants to let go of your car first! So now, both of you are st
 
 In computers, this happens when different programs or processes are waiting for resources (like memory, files, or devices) that another process is holding, and no one can continue.
 `.trim(),
+				"/test-video.mp4",
 			);
 		}, 2000);
 	}
@@ -211,6 +212,15 @@ In computers, this happens when different programs or processes are waiting for 
 											<p className="mt-2">
 												{message.message}
 											</p>
+											{message.video && (
+												<video
+													type="video/mp4"
+													src={message.video}
+													controls
+													autoPlay
+													className="w-full mt-2"
+												/>
+											)}
 										</div>
 									))}
 								</div>
