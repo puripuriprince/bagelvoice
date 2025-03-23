@@ -20,7 +20,12 @@ import {
 } from "@heroicons/react/24/outline";
 import { PaperAirplaneIcon } from "@heroicons/react/24/solid";
 
-import { NewspaperIcon, PaperclipIcon, PhoneIcon } from "lucide-react";
+import {
+	NewspaperIcon,
+	PaperclipIcon,
+	PhoneIcon,
+	PhoneOff,
+} from "lucide-react";
 import SourceList from "./SourceList";
 import { useParams, useRouter } from "next/navigation";
 import useBoothStore from "@/stores/useBoothStore";
@@ -44,6 +49,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import useChatStore from "@/stores/useChatStore";
 import { useEffect, useRef, useState } from "react";
+import Message from "./Message";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -68,6 +74,11 @@ export default function BoothPage() {
 	const chatSummary = useChatStore(state => state.chatSummary);
 	const setChatSummary = useChatStore(state => state.setChatSummary);
 	const addMessage = useChatStore(state => state.addMessage);
+	const setSources = useSourcesStore(state => state.setSources);
+	const streamMessage = useChatStore(state => state.streamMessage);
+	const [isCallActive, setIsCallActive] = useState(false);
+	const mediaRecorderRef = useRef(null);
+	const streamRef = useRef(null);
 
 	function handleStartStudying() {
 		// TODO: Fetch the summary from the sources
@@ -106,7 +117,7 @@ Deadlocks Summary:
 		addMessage("Me", chatBoxInput);
 		setChatBoxInput("");
 		setTimeout(() => {
-			addMessage(
+			streamMessage(
 				"James",
 				`
 Alright! Imagine you and your friend are playing with toy cars. You each have one car, but you both want the same second car to complete your race.
@@ -115,7 +126,7 @@ Alright! Imagine you and your friend are playing with toy cars. You each have on
 
     Your friend is holding Car B and waiting for Car A.
 
-But neither of you wants to let go of your car first! So now, both of you are stuck, unable to play. This is a deadlock—no one can move forward because each person is waiting for something the other won’t give up.
+But neither of you wants to let go of your car first! So now, both of you are stuck, unable to play. This is a deadlock—no one can move forward because each person is waiting for something the other won't give up.
 
 In computers, this happens when different programs or processes are waiting for resources (like memory, files, or devices) that another process is holding, and no one can continue.
 `.trim(),
@@ -124,12 +135,85 @@ In computers, this happens when different programs or processes are waiting for 
 		}, 2000);
 	}
 
+	// Function to toggle microphone for call
+	const toggleCall = async () => {
+		if (isCallActive) {
+			// End call and turn off microphone
+			if (streamRef.current) {
+				streamRef.current.getTracks().forEach(track => track.stop());
+				streamRef.current = null;
+			}
+			if (mediaRecorderRef.current) {
+				mediaRecorderRef.current.stop();
+				mediaRecorderRef.current = null;
+			}
+			setIsCallActive(false);
+			// You might want to notify the user that the call has ended
+		} else {
+			try {
+				// Request microphone access
+				const stream = await navigator.mediaDevices.getUserMedia({
+					audio: true,
+				});
+				streamRef.current = stream;
+
+				// Create media recorder
+				const mediaRecorder = new MediaRecorder(stream);
+				mediaRecorderRef.current = mediaRecorder;
+
+				// Optional: Handle the recorded audio data
+				const audioChunks = [];
+				mediaRecorder.addEventListener("dataavailable", event => {
+					audioChunks.push(event.data);
+				});
+
+				// Start recording
+				mediaRecorder.start();
+				setIsCallActive(true);
+
+				// Notify the user that the call has started
+			} catch (error) {
+				console.error("Error accessing microphone:", error);
+			}
+		}
+	};
+
 	useEffect(() => {
 		if (messagesContainerRef.current) {
 			messagesContainerRef.current.scrollTop =
 				messagesContainerRef.current.scrollHeight;
 		}
 	}, [messages]); // Dependency array includes messages so it runs when messages update
+
+	useEffect(() => {
+		// FETCH THE SOURCES
+		setSources([
+			{
+				id: 1,
+				name: "Deadlocks",
+				selected: true,
+			},
+			{
+				id: 2,
+				name: "Starvation",
+				selected: true,
+			},
+			{
+				id: 3,
+				name: "Priority Inversion",
+				selected: true,
+			},
+		]);
+	}, []);
+
+	// Clean up microphone access when component unmounts
+	useEffect(() => {
+		return () => {
+			if (streamRef.current) {
+				streamRef.current.getTracks().forEach(track => track.stop());
+			}
+		};
+	}, []);
 
 	if (!booth) return null;
 	return (
@@ -192,7 +276,7 @@ In computers, this happens when different programs or processes are waiting for 
 									className="border rounded-lg w-full overflow-auto"
 									ref={messagesContainerRef}
 									style={{
-										height: "calc(100vh - 200px)",
+										height: "calc(100vh - 250px)",
 									}}
 								>
 									<div className="p-4 text-white/50">
@@ -204,32 +288,10 @@ In computers, this happens when different programs or processes are waiting for 
 									</div>
 									<hr className="mx-4" />
 									{messages.map(message => (
-										<div className="p-4" key={message.id}>
-											<div className="flex gap-4 items-center">
-												{message.user !== "Me" && (
-													<img
-														className={`rounded-full w-12 h-12 bg-white`}
-													/>
-												)}
-												<h2
-													className={`font-bold ${message.user === "Me" && "text-green-400"}`}
-												>
-													{message.user}
-												</h2>
-											</div>
-											<p className="mt-2">
-												{message.message}
-											</p>
-											{message.video && (
-												<video
-													type="video/mp4"
-													src={message.video}
-													controls
-													autoPlay
-													className="w-full mt-2"
-												/>
-											)}
-										</div>
+										<Message
+											message={message}
+											key={message.id}
+										/>
 									))}
 								</div>
 							</div>
@@ -313,9 +375,21 @@ In computers, this happens when different programs or processes are waiting for 
 							seriously. He will make sure that you understand the
 							topics
 						</p>
-						<Button className="w-full mt-4 flex gap-3 items-center">
-							<PhoneArrowUpRightIcon className="w-6 h-6" />
-							Start Call
+						<Button
+							className={`w-full mt-4 flex gap-3 items-center ${isCallActive ? "bg-red-400 hover:bg-red-500" : ""}`}
+							onClick={toggleCall}
+						>
+							{isCallActive ? (
+								<>
+									<PhoneOff className="w-6 h-6" />
+									End Call
+								</>
+							) : (
+								<>
+									<PhoneArrowUpRightIcon className="w-6 h-6" />
+									Start Call
+								</>
+							)}
 						</Button>
 					</div>
 				</div>

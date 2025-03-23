@@ -33,7 +33,9 @@ class CohereClient:
 
         Args:
             message (str): The user's message
-            documents (list): List of document dictionaries for context
+            documents (list): List of document dictionaries for context.
+                Each document should have 'id' and 'data' fields.
+                The 'data' field should contain at least one field (e.g., 'text', 'title').
             conversation_history (list, optional): Previous conversation history
 
         Returns:
@@ -60,12 +62,62 @@ class CohereClient:
 
         print(f"Document count: {len(documents)}")
 
+        # Validate and fix document format if needed
+        valid_docs = []
+        for i, doc in enumerate(documents):
+            if not isinstance(doc, dict):
+                print(f"Warning: Document {i} is not a dictionary. Skipping.")
+                continue
+
+            # Ensure each document has id and data fields
+            doc_id = doc.get('id')
+            if not doc_id:
+                doc_id = f"doc_{i}"
+                print(f"Warning: Document {i} missing 'id'. Generated ID: {doc_id}")
+
+            # Ensure data field exists and contains at least one sub-field
+            doc_data = doc.get('data', {})
+            if not doc_data or not isinstance(doc_data, dict) or len(doc_data) == 0:
+                # If data is missing or empty, try to construct it from other fields
+                doc_data = {}
+
+                # Check if document has direct text/title fields
+                if 'text' in doc:
+                    doc_data['text'] = doc['text']
+                elif 'snippet' in doc:
+                    doc_data['text'] = doc['snippet']
+                elif 'content' in doc:
+                    doc_data['text'] = doc['content']
+
+                if 'title' in doc:
+                    doc_data['title'] = doc['title']
+
+                # If still no data, skip this document
+                if not doc_data:
+                    print(f"Warning: Document {i} has no valid content. Skipping.")
+                    continue
+
+            # Create a valid document
+            valid_doc = {
+                'id': doc_id,
+                'data': doc_data
+            }
+
+            valid_docs.append(valid_doc)
+
+        if not valid_docs:
+            raise ValueError("No valid documents found for RAG query")
+
+        documents = valid_docs
+
         # Sample first document structure
         if documents:
             print("\nSample document structure:")
             sample_doc = documents[0]
             print(f"Document type: {type(sample_doc)}")
             print(f"Document keys: {sample_doc.keys() if isinstance(sample_doc, dict) else 'Not a dictionary'}")
+            if 'data' in sample_doc:
+                print(f"Data keys: {sample_doc['data'].keys() if isinstance(sample_doc['data'], dict) else 'Not a dictionary'}")
 
         try:
             print("\nSending request to Cohere API...")
@@ -166,7 +218,7 @@ class CohereClient:
             print("\nSending summarization request to Cohere API...")
             response = self.client.chat(
                 model=self.chat_model,
-                message=combined_prompt,
+                messages=[{"role": "user", "content": combined_prompt}],
                 temperature=0.5,
                 max_tokens=max_tokens
             )
