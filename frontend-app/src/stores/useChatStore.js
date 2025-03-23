@@ -2,32 +2,42 @@ import { create } from "zustand";
 
 const useChatStore = create((set, get) => ({
 	messages: [
-		{ id: 1, user: "Me", message: "Hi, how is your day doing?" },
-		{
-			id: 2,
-			user: "Alex",
-			message:
-				"Hey! My day's going great—thanks for asking. How about you? Working on anything interesting today? 😊",
-		},
-		{
-			id: 3,
-			user: "Me",
-			message:
-				"not sure, can you tell me more about what i should do in life",
-		},
-		{
-			id: 4,
-			user: "Alex",
-			message:
-				"Of course! I'd be happy to help. What are you passionate about? What are your interests?",
-		},
-		{
-			id: 5,
-			user: "Alex",
-			message:
-				"I think it's important to find something you're passionate about and pursue it. What do you think?",
-		},
+		//{ id: 1, user: "Me", message: "Hi, how is your day doing?" },
+		//{
+		//	id: 2,
+		//	user: "Alex",
+		//	message:
+		//		"Hey! My day's going great—thanks for asking. How about you? Working on anything interesting today? 😊",
+		//},
+		//{
+		//	id: 3,
+		//	user: "Me",
+		//	message:
+		//		"not sure, can you tell me more about what i should do in life",
+		//},
+		//{
+		//	id: 4,
+		//	user: "Alex",
+		//	message:
+		//		"Of course! I'd be happy to help. What are you passionate about? What are your interests?",
+		//},
+		//{
+		//	id: 5,
+		//	user: "Alex",
+		//	message:
+		//		"I think it's important to find something you're passionate about and pursue it. What do you think?",
+		//},
 	],
+	isStarted: false,
+	setIsStarted: isStarted => set({ isStarted }),
+	chatSummary: "",
+	setChatSummary: chatSummary => set({ chatSummary }),
+	addMessage: (user, message) => {
+		const newId = get().messages.length + 1;
+		set(state => ({
+			messages: [...state.messages, { id: newId, user, message }],
+		}));
+	},
 
 	//// Add streaming functionality
 	//streamMessage: (user, fullMessage) => {

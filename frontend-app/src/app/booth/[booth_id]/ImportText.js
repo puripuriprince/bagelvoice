@@ -11,13 +11,25 @@ import { useState } from "react";
 import { NewspaperIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+import useSourcesStore from "@/stores/useSourcesStore";
+import { DialogClose } from "@radix-ui/react-dialog";
 
 export default function ImportText() {
 	const [textInput, setTextInput] = useState("");
+	const addSource = useSourcesStore(state => state.addSource);
 
 	// TODO: Handle upload
 	function handleUpload() {
-		console.log(textInput);
+		if (!textInput) return;
+		console.log("Uploading text...", textInput);
+
+		setTextInput("");
+		setTimeout(() => {
+			addSource({
+				name: "Text at " + new Date().toLocaleString().split(", ")[1],
+				summary: textInput,
+			});
+		}, 2000);
 	}
 
 	return (
@@ -42,7 +54,9 @@ export default function ImportText() {
 						value={textInput}
 						onChange={e => setTextInput(e.target.value)}
 					/>
-					<Button onClick={handleUpload}>Upload</Button>
+					<DialogClose asChild>
+						<Button onClick={handleUpload}>Upload</Button>
+					</DialogClose>
 				</DialogHeader>
 			</DialogContent>
 		</Dialog>

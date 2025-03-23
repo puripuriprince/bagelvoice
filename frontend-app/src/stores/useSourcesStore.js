@@ -46,6 +46,18 @@ const useSourcesStore = create(set => ({
 			sources: state.sources.filter(source => source.id !== id),
 		}));
 	},
+	addSource: async source => {
+		set(state => ({
+			sources: [
+				...state.sources,
+				{
+					id: Math.max(...state.sources.map(s => s.id)) + 1,
+					selected: true,
+					...source,
+				},
+			],
+		}));
+	},
 }));
 
 export default useSourcesStore;

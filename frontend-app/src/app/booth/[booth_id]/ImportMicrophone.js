@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect } from "react";
 import { DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+import useSourcesStore from "@/stores/useSourcesStore";
 
 export default function ImportMicrophone() {
 	const [audioFile, setAudioFile] = useState(null);
@@ -23,6 +24,7 @@ export default function ImportMicrophone() {
 	const mediaRecorderRef = useRef(null);
 	const chunksRef = useRef([]);
 	const timerRef = useRef(null);
+	const addSource = useSourcesStore(state => state.addSource);
 
 	// Format the time as MM:SS
 	const formatTime = seconds => {
@@ -119,6 +121,14 @@ export default function ImportMicrophone() {
 			return;
 		}
 
+		// TODO: Handle real file upload
+		setTimeout(() => {
+			addSource({
+				name: "Audio at " + new Date().toLocaleString().split(", ")[1],
+				summary: "Audio recording",
+			});
+		}, 2000);
+
 		try {
 			const formData = new FormData();
 			formData.append("audio", audioFile);
@@ -205,9 +215,14 @@ export default function ImportMicrophone() {
 				</DialogHeader>
 
 				<DialogFooter className="mt-4">
-					<Button onClick={handleUploadFile} disabled={!audioFile}>
-						Upload
-					</Button>
+					<DialogClose asChild>
+						<Button
+							onClick={handleUploadFile}
+							disabled={!audioFile}
+						>
+							Upload
+						</Button>
+					</DialogClose>
 					<DialogClose asChild>
 						<Button variant="outline">Cancel</Button>
 					</DialogClose>
