@@ -89,6 +89,7 @@ useChatStore
 		//	user: "Alex",
 		//	message:
 		//		"Hey! My day's going great—thanks for asking. How about you? Working on anything interesting today? 😊",
+		//	video: "sample.mp4",
 		//},
 		//{
 		//	id: 3,
@@ -113,10 +114,10 @@ useChatStore
 	setIsStarted: isStarted => set({ isStarted }),
 	chatSummary: "",
 	setChatSummary: chatSummary => set({ chatSummary }),
-	addMessage: (user, message) => {
+	addMessage: (user, message, video) => {
 		const newId = get().messages.length + 1;
 		set(state => ({
-			messages: [...state.messages, { id: newId, user, message }],
+			messages: [...state.messages, { id: newId, user, message, video }],
 		}));
 	},
 
