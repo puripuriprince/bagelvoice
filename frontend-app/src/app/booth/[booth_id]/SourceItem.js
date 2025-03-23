@@ -12,6 +12,7 @@ import {
 import { Dialog } from "@/components/ui/dialog";
 import ItemRename from "./ItemRename";
 import ItemDelete from "./ItemDelete";
+import ItemQuickView from "./ItemQuickView";
 
 export default function SourceItem({ source }) {
 	const setSourceChecked = useSourcesStore(state => state.setSourceChecked);
@@ -35,10 +36,7 @@ export default function SourceItem({ source }) {
 				</DropdownMenuTrigger>
 
 				<DropdownMenuContent>
-					<DropdownMenuItem>
-						<EyeIcon size={16} />
-						Quick View
-					</DropdownMenuItem>
+					<ItemQuickView source={source} />
 					<ItemRename source={source} />
 					<ItemDelete source={source} />
 				</DropdownMenuContent>
