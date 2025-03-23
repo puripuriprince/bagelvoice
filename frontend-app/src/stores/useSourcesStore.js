@@ -2,30 +2,30 @@ import { create } from "zustand";
 
 const useSourcesStore = create(set => ({
 	sources: [
-		{
-			id: 1,
-			name: "slides 1",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
-		{
-			id: 2,
-			name: "slides 2",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
-		{
-			id: 3,
-			name: "lecture #1 recording",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
-		{
-			id: 4,
-			name: "lecture #2 recording",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
+		//{
+		//	id: 1,
+		//	name: "slides 1",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
+		//{
+		//	id: 2,
+		//	name: "slides 2",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
+		//{
+		//	id: 3,
+		//	name: "lecture #1 recording",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
+		//{
+		//	id: 4,
+		//	name: "lecture #2 recording",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
 	],
 	setSources: sources => set({ sources }),
 	setSourceChecked: (id, checked) =>
