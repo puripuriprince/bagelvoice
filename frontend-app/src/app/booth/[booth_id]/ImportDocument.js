@@ -17,11 +17,46 @@ import { DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 
 export default function ImportDocument() {
 	const [files, setFiles] = useState([]);
+	const [isLoading, setIsLoading] = useState(false);
 
 	// TODO: Upload the files
 	function handleUpload() {
-		console.log(files);
-	}
+		if (!files || files.length === 0) {
+		  console.error('No files selected');
+		  return;
+		}
+		
+		setIsLoading(true);
+		
+		const formData = new FormData();
+		Array.from(files).forEach((file, index) => {
+		  formData.append(`file`, file);
+		});
+		
+		fetch('http://127.0.0.1:5000/api/process-document', {
+		  method: 'POST',
+		  body: formData,
+		})
+		  .then(response => {
+			if (!response.ok) {
+			  throw new Error(`Upload failed with status: ${response.status}`);
+			}
+			return response.json();
+		  })
+		  .then(data => {
+			console.log('Upload successful:', data);
+			// Show success toast
+			// Close dialog
+			setFiles([]);
+		  })
+		  .catch(error => {
+			console.error('Error uploading files:', error);
+			// Show error toast
+		  })
+		  .finally(() => {
+			setIsLoading(false);
+		  });
+	  }
 
 	return (
 		<Dialog>

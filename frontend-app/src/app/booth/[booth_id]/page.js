@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import useChatStore from "@/stores/useChatStore";
+import { useEffect, useRef } from "react";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -51,6 +53,15 @@ export default function BoothPage() {
 	);
 	const callReceiver = useCallStore(state => state.callReceiver);
 	const setCallReceiver = useCallStore(state => state.setCallReceiver);
+	const messages = useChatStore(state => state.messages);
+	const messagesContainerRef = useRef(null);
+
+	useEffect(() => {
+		if (messagesContainerRef.current) {
+			messagesContainerRef.current.scrollTop =
+				messagesContainerRef.current.scrollHeight;
+		}
+	}, [messages]); // Dependency array includes messages so it runs when messages update
 
 	return (
 		<div className="h-full flex flex-col">
@@ -96,90 +107,28 @@ export default function BoothPage() {
 					<div className="px-4 pt-4 grow">
 						<div
 							className="border rounded-lg w-full overflow-auto"
+							ref={messagesContainerRef}
 							style={{
 								height: "calc(100vh - 200px)",
 							}}
 						>
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<h2 className="font-bold text-green-400">
-										Me
-									</h2>
+							{messages.map(message => (
+								<div className="p-4" key={message.id}>
+									<div className="flex gap-4 items-center">
+										{message.user !== "Me" && (
+											<img
+												className={`rounded-full w-12 h-12 bg-white`}
+											/>
+										)}
+										<h2
+											className={`font-bold ${message.user === "Me" && "text-green-400"}`}
+										>
+											{message.user}
+										</h2>
+									</div>
+									<p className="mt-2">{message.message}</p>
 								</div>
-								<p className="mt-2">
-									Hi, how is your day doing?
-								</p>
-							</div>
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<img className="rounded-full w-12 h-12 bg-white" />
-									<h2 className="font-bold">Alex</h2>
-								</div>
-								<p className="mt-2">
-									Hey! My day's going great—thanks for asking.
-									How about you? Working on anything
-									interesting today? 😊
-								</p>
-							</div>
-
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<h2 className="font-bold text-green-400">
-										Me
-									</h2>
-								</div>
-								<p className="mt-2">
-									not sure, can you tell me more about what i
-									should do in life
-								</p>
-							</div>
-
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<img className="rounded-full w-12 h-12 bg-white" />
-									<h2 className="font-bold">Alex</h2>
-								</div>
-								<p className="mt-2">
-									That’s a really deep question! Figuring out
-									what to do in life can feel overwhelming at
-									times, but it’s also a chance to explore
-									what excites you. Here are a few things that
-									might help guide you in finding direction:
-									Identify What You're Passionate About: Think
-									about what excites you. Whether it's
-									technology, art, helping others, or
-									something else, knowing what you’re
-									passionate about can give you a sense of
-									purpose. Set Small Goals: Sometimes, big
-									goals can be intimidating. Start by setting
-									smaller, achievable goals that can gradually
-									lead you toward your bigger dreams. Learn
-									Continuously: Life is full of learning
-									opportunities. Whether it's through school,
-									hobbies, or life experiences, gaining new
-									skills and knowledge is a great way to grow.
-									Explore Different Paths: It’s okay to not
-									have it all figured out. Try different
-									things, whether through internships, side
-									projects, or new hobbies. Exploration can
-									help you discover things you never thought
-									you'd enjoy. Be Open to Change: Life is
-									unpredictable. Be open to changing
-									directions as you grow and learn more about
-									yourself. Sometimes, the best opportunities
-									come from unexpected places. Take Care of
-									Yourself: Don’t forget to nurture your
-									physical and mental health. Life can be
-									busy, but feeling good is essential to
-									living well. Impact and Meaning: Think about
-									what kind of impact you want to make. It
-									could be through work, relationships, or
-									contributing to something bigger than
-									yourself. Do any of these resonate with you?
-									Sometimes just thinking about what feels
-									meaningful can spark new ideas.
-								</p>
-							</div>
+							))}
 						</div>
 					</div>
 					<div className="text-end text-white/80 my-1 me-4 font-semibold">
