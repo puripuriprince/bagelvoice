@@ -32,6 +32,8 @@ export default function Message({ message }) {
 	useEffect(() => {
 		if (message.video) {
 			const checkVideoExistence = async () => {
+				if (!message.video) return;
+
 				try {
 					const response = await fetch(message.video, {
 						method: "HEAD",
@@ -75,6 +77,7 @@ export default function Message({ message }) {
 		);
 	};
 
+	console.log(message.video, "IS VIDEO");
 	return (
 		<div className="p-4" key={message.id}>
 			<div className="flex gap-4 items-center">
@@ -94,7 +97,6 @@ export default function Message({ message }) {
 			</div>
 
 			{renderMessageContent()}
-
 			{message.video && videoExists && (
 				<video
 					type="video/mp4"

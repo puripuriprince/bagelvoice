@@ -37,7 +37,8 @@ export default function Home() {
 			<div className="p-12">
 				<h1 className="text-4xl font-bold">AICademy</h1>
 				<p className="mt-1 text-white/50">
-					Welcome to AICademy, the AI tutor who talks to you
+					Welcome to AICademy, the AI tutor who cares about
+					visualization.
 				</p>
 				<hr className="my-6" />
 				<div className="flex items-center justify-between">

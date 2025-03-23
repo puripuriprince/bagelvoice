@@ -179,7 +179,9 @@ export default function BoothPage() {
 				addMessage(
 					callReceiver,
 					data.answer,
-					process.env.NEXT_PUBLIC_API_URL + data.video,
+					data.audio
+						? process.env.NEXT_PUBLIC_API_URL + data.video
+						: null,
 				);
 				//streamMessage(
 				//	"James",
