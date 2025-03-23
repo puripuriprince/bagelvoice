@@ -92,8 +92,8 @@ def generate_manim_script(manim_code):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant that generates commentary explanation for the answer. It must be maximum 10 seconds long."},
-            {"role": "user", "content": f"Generate a synchronized commentary for the following Manim code: {manim_code}"},
+            {"role": "system", "content": "You are a helpful teacher that generates explanations over an animation in manim. It must be synchronized with the animation, and must be at most 15 seconds long. You will act as the teacher, who uses the animation to explain the concept."},
+            {"role": "user", "content": f"Generate a synchronized explanation for the following Manim animation code. ONLY WRITE WHAT THE TEACHER WOULD SAY, DONT BE LIKE 'see the slide', 'the scene transition', etc NOTHING ELSE. This is the code: {manim_code}"},
         ],
     )
 
@@ -106,7 +106,7 @@ def generate_manim_code(question, answer):
         messages=[
             {
                 "role": "system",
-                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Don't put too much on the screen at the same time! make use of different scenes.Generate complete, self-contained Manim code that can be executed directly to produce an educational video. You only reply with the code, no commentary. No backticks, no ```python, no code blocks, no nothing. Just the code.",
+                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Don't put too much on the screen at the same time! Make only one scene, but make items appear and disappear. Generate complete, self-contained Manim code that can be executed directly to produce an educational video. You only reply with the code, no commentary. No backticks, no ```python, no code blocks, no nothing. Just the code.",
             },
             {
                 "role": "user",
