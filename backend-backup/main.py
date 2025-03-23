@@ -87,6 +87,17 @@ def check_video_requirement(question):
     answer = response.choices[0].message.content.strip().lower()
     return "yes" in answer
 
+# Generates a short explanation script for the answer
+def generate_manim_script(manim_code):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that generates commentary explanation for the answer. It must be maximum 10 seconds long."},
+            {"role": "user", "content": f"Generate a synchronized commentary for the following Manim code: {manim_code}"},
+        ],
+    )
+
+    return response.choices[0].message.content
 
 # Generate Manim code for video explanation
 def generate_manim_code(question, answer):
@@ -95,7 +106,7 @@ def generate_manim_code(question, answer):
         messages=[
             {
                 "role": "system",
-                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Generate complete, self-contained Manim code that can be executed directly to produce an educational video. You only reply with the code, no commentary. No backticks, no ```python, no code blocks, no nothing. Just the code.",
+                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Don't put too much on the screen at the same time! make use of different scenes.Generate complete, self-contained Manim code that can be executed directly to produce an educational video. You only reply with the code, no commentary. No backticks, no ```python, no code blocks, no nothing. Just the code.",
             },
             {
                 "role": "user",
@@ -104,12 +115,45 @@ def generate_manim_code(question, answer):
         ],
     )
     content = response.choices[0].message.content
-    if content.startswith("```python"):
-        content = content[len("```python") :]
-    if content.endswith("```"):
-        content = content[: -len("```")]
+    # remove everything before the first ```python
+    # remove everything after the last ```
+    content = content.replace("```python", "").replace("```", "")
+
     return content
 
+
+
+def generate_audio_from_script(script, audio_path):
+    try:
+        print("Trying to generate", script, "to", audio_path)
+
+        # Make sure your API key is set
+        # Either set it in your environment variables or add:
+        # openai.api_key = "your-api-key"
+
+        # Call OpenAI's TTS API
+        response = client.audio.speech.create(
+            model="gpt-4o-mini-tts",  # or "tts-1-hd" for higher quality
+            voice="coral",  # other options: "echo", "fable", "onyx", "nova", "shimmer"
+            input=script
+        )
+
+        # Save the audio file
+        response.stream_to_file(audio_path)
+
+        # Check if the file was created
+        if not os.path.exists(audio_path):
+            raise Exception(f"Audio file {audio_path} was not created")
+
+        print(f"Successfully generated audio at {audio_path}")
+        return True
+
+    except Exception as e:
+        print(f"Error generating audio: {str(e)}")
+        # Create an error log file with detailed information
+        with open(f"{audio_path}.error.log", "w") as f:
+            f.write(f"Error generating audio: {str(e)}\n\nScript:\n{script}")
+        return False
 
 # Function to render Manim video asynchronously
 def render_manim_video(manim_code, video_path, video_filename):
@@ -135,39 +179,39 @@ def render_manim_video(manim_code, video_path, video_filename):
         print("BASE NAME", base_name)
 
         # Look for the generated video in the expected location
-        expected_dir = f"media/videos/{base_name}"
-        if os.path.exists(expected_dir):
-            # Look for the quality directories (1080p60, etc.)
-            for quality_dir in os.listdir(expected_dir):
-                quality_path = os.path.join(expected_dir, quality_dir)
-                if os.path.isdir(quality_path):
-                    # Look for the MainScene.mp4 file
-                    for video_file in os.listdir(quality_path):
-                        if video_file.endswith(".mp4"):
-                            source_video = os.path.join(quality_path, video_file)
-                            # Ensure the target directory exists
-                            os.makedirs(os.path.dirname(video_path), exist_ok=True)
-                            # Move the file to the static directory
-                            os.rename(source_video, video_path)
-                            print(f"Successfully moved video from {source_video} to {video_path}")
-                            break
-        else:
-            # Fallback: Try to find the video file anywhere in the media directory
-            for root, dirs, files in os.walk("media"):
-                for file in files:
-                    if file.endswith(".mp4") and "MainScene" in file:
-                        source_video = os.path.join(root, file)
-                        # Ensure the target directory exists
-                        os.makedirs(os.path.dirname(video_path), exist_ok=True)
-                        # Move the file to the static directory
-                        os.rename(source_video, video_path)
-                        print(f"Fallback: Moved video from {source_video} to {video_path}")
-                        break
+        # expected_dir = f"media/videos/{base_name}"
+        # if os.path.exists(expected_dir):
+        #     # Look for the quality directories (1080p60, etc.)
+        #     for quality_dir in os.listdir(expected_dir):
+        #         quality_path = os.path.join(expected_dir, quality_dir)
+        #         if os.path.isdir(quality_path):
+        #             # Look for the MainScene.mp4 file
+        #             for video_file in os.listdir(quality_path):
+        #                 if video_file.endswith(".mp4"):
+        #                     source_video = os.path.join(quality_path, video_file)
+        #                     # Ensure the target directory exists
+        #                     os.makedirs(os.path.dirname(video_path), exist_ok=True)
+        #                     # Move the file to the static directory
+        #                     os.rename(source_video, video_path)
+        #                     print(f"Successfully moved video from {source_video} to {video_path}")
+        #                     break
+        # else:
+        #     # Fallback: Try to find the video file anywhere in the media directory
+        #     for root, dirs, files in os.walk("media"):
+        #         for file in files:
+        #             if file.endswith(".mp4") and "MainScene" in file:
+        #                 source_video = os.path.join(root, file)
+        #                 # Ensure the target directory exists
+        #                 os.makedirs(os.path.dirname(video_path), exist_ok=True)
+        #                 # Move the file to the static directory
+        #                 os.rename(source_video, video_path)
+        #                 print(f"Fallback: Moved video from {source_video} to {video_path}")
+        #                 break
 
-        # Clean up the temporary file
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
-            print(f"Removed temporary file: {temp_file}")
+        # # Clean up the temporary file
+        # if os.path.exists(temp_file):
+        #     os.remove(temp_file)
+        #     print(f"Removed temporary file: {temp_file}")
 
     except Exception as e:
         print(f"Error generating video: {str(e)}")
@@ -181,6 +225,11 @@ def serve_video(filename):
     # media/videos/temp_manim_{filename}/1080p60/{filename}.mp4
     return send_from_directory(f"media/videos/temp_manim_{filename}/1080p60", filename)
 
+# Serve audio file
+@app.route("/static/audio/<path:filename>")
+def serve_audio(filename):
+    print("SERVING", filename)
+    return send_from_directory(f"media/audio", filename + ".wav")
 
 @app.route("/summarize", methods=["GET"])
 def asdasd():
@@ -431,7 +480,7 @@ def answer_question():
         video_url = f"/static/videos/{video_filename}"
 
     # Create context from summaries
-    context = "I'll provide you with summaries of several documents. Based on this information, please answer the question that follows.\n\n"
+    context = "I'll provide you with summaries of several documents. Based on this information, please answer the question that follows. Assume that they may contain data relevant or not to the subject. \n\n"
 
     # Create a list of document names for referencing
     doc_names = []
@@ -451,7 +500,7 @@ def answer_question():
         context += f"Document: {doc_name} (ID: {doc_id})\nSummary: {summary}\n\n"
 
     context += f"Question: {question}\n\n"
-    context += "Please provide a comprehensive answer based solely on the information provided in these document summaries. "
+    context += "Please provide a comprehensive answer based solely on the information provided in these document summaries, and extend the content to the topic of the question. "
     context += "Include specific references to the documents using the format [Document Name] where 'Document Name' is the exact name of the document. "
     context += "When you cite information from a specific document, make it clear which document it came from. "
     context += f"This is your response tone: {personality}"
@@ -497,9 +546,20 @@ def answer_question():
             result["video"] = video_url
 
             # Start video generation in a background thread
+            def generate_script_async(code):
+                print("NEW THREAD SHIT", video_filename, "for", code)
+                manim_script = generate_manim_script(code)
+                print("manim script", manim_script)
+                generate_audio_from_script(manim_script, f"media/audio/{video_filename}.wav")
+
             def generate_video_async():
                 manim_code = generate_manim_code(question, answer)
+
+                threading.Thread(target=generate_script_async, args=(manim_code,)).start()
+
                 render_manim_video(manim_code, video_path, video_filename)
+                print("FINISHED VIDEO")
+
 
             threading.Thread(target=generate_video_async).start()
 
@@ -510,4 +570,4 @@ def answer_question():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8080)
+    app.run(debug=False, host="0.0.0.0", port=8080)
