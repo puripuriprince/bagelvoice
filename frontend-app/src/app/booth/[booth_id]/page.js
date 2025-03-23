@@ -94,7 +94,7 @@ export default function BoothPage() {
 		// Optional: Show loading state
 		// setIsLoading(true);
 
-		fetch("http://localhost:8080/meta-summarize", {
+		fetch(process.env.NEXT_PUBLIC_API_URL + "/meta-summarize", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -152,7 +152,7 @@ export default function BoothPage() {
 		// setIsLoading(true);
 		console.log(callOptions.find(x => x.name === callReceiver).description);
 		// Call your backend API
-		fetch("http://localhost:8080/answer-question", {
+		fetch(process.env.NEXT_PUBLIC_API_URL + "/answer-question", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -176,7 +176,13 @@ export default function BoothPage() {
 			})
 			.then(data => {
 				// Stream the AI's answer with references
-				addMessage(callReceiver, data.answer, data.video);
+				addMessage(
+					callReceiver,
+					data.answer,
+					data.video
+						? process.env.NEXT_PUBLIC_API_URL + data.video
+						: null,
+				);
 				//streamMessage(
 				//	"James",
 				//	data.answer,

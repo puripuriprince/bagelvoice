@@ -25,7 +25,7 @@ export default function ImportText() {
 		console.log("Uploading text...", textInput);
 
 		// Call the new backend endpoint
-		fetch("http://localhost:8080/summarize-text", {
+		fetch(process.env.NEXT_PUBLIC_API_URL + "/summarize-text", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
