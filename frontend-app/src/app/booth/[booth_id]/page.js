@@ -54,7 +54,7 @@ export default function BoothPage() {
 	const callReceiver = useCallStore(state => state.callReceiver);
 	const setCallReceiver = useCallStore(state => state.setCallReceiver);
 	const messages = useChatStore(state => state.messages);
-	const messagesContainerRef = useRef(null);EAD
+	const messagesContainerRef = useRef(null);
 
 	// useEffect(() => {
 	// 	if (messagesContainerRef.current) {

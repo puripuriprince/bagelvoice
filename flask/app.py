@@ -22,6 +22,8 @@ from utils.session_manager import SessionManager
 from models.gemini_client import GeminiClient
 from models.vector_store import VectorStore
 
+from vs_store import query_database, connect_to_vstore, add_documents_to_vstore, add_pdf_to_vstore
+
 # Create Flask app
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -584,14 +586,15 @@ def process_document():
     """
     Process a document and add it to the vector store.
     """
+
     # Verify vector store is available
-    if not vector_store:
-        return jsonify({"error": "Vector store is not available"}), 503
+    # if not vector_store:
+    #     return jsonify({"error": "Vector store is not available"}), 503
 
     # Check if session_id is provided
-    session_id = request.form.get('session_id')
-    if not session_id:
-        return jsonify({"error": "session_id is required"}), 400
+    # session_id = request.form.get('session_id')
+    # if not session_id:
+    #     return jsonify({"error": "session_id is required"}), 400
 
     # Check if file was uploaded
     if 'file' not in request.files:
@@ -602,7 +605,7 @@ def process_document():
         return jsonify({"error": "No selected file"}), 400
 
     # Check if it's an acceptable format
-    if not allowed_file(file.filename, ['pdf', 'txt']):
+    if not file.filename.lower().endswith('.pdf'):
         return jsonify({"error": "File format not supported"}), 400
 
     # Save the file
@@ -610,40 +613,53 @@ def process_document():
     file_path = os.path.join(app.config['PDF_FOLDER'], filename)
     file.save(file_path)
 
-    try:
-        # Process different file types
-        if filename.lower().endswith('.pdf'):
-            # Process PDF
-            from process_pdf_to_vectors import process_pdf_to_vector_store
-            document_id = process_pdf_to_vector_store(file_path, vector_store, session_id)
-        elif filename.lower().endswith('.txt'):
-            # Process text file
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+    is_uploaded = add_pdf_to_vstore(file_path)
 
-            # Generate a unique document ID
-            document_id = f"doc_{uuid.uuid4().hex[:10]}"
+    if not is_uploaded:
+        return jsonify({"error": "Failed to process document"}), 500
 
-            # Add to vector store
-            vector_store.add_document(
-                document_id=document_id,
-                title=os.path.splitext(filename)[0],
-                content=content,
-                source_path=file_path,
-                session_id=session_id
-            )
+    return jsonify({
+        "success": True,
+        "message": "Document processed and added to vector store"
+        })
 
-        if document_id:
-            return jsonify({
-                "success": True,
-                "message": "Document processed and added to vector store",
-                "document_id": document_id
-            })
-        else:
-            return jsonify({"error": "Failed to process document"}), 500
+    
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    # try:
+    #     # Process different file types
+    #     if filename.lower().endswith('.pdf'):
+    #         # Process PDF
+    #         from process_pdf_to_vectors import process_pdf_to_vector_store
+    #         document_id = process_pdf_to_vector_store(file_path, vector_store, session_id)
+    #     elif filename.lower().endswith('.txt'):
+    #         # Process text file
+    #         with open(file_path, 'r', encoding='utf-8') as f:
+    #             content = f.read()
+
+    #         # Generate a unique document ID
+    #         document_id = f"doc_{uuid.uuid4().hex[:10]}"
+
+    #         # Add to vector store
+    #         vector_store.add_document(
+    #             document_id=document_id,
+    #             title=os.path.splitext(filename)[0],
+    #             content=content,
+    #             source_path=file_path,
+    #             session_id=session_id
+    #         )
+
+    #     if document_id:
+    #         return jsonify({
+    #             "success": True,
+    #             "message": "Document processed and added to vector store",
+    #             "document_id": document_id
+    #         })
+    #     else:
+    #         return jsonify({"error": "Failed to process document"}), 500
+
+    # except Exception as e:
+    #     return jsonify({"error": str(e)}), 500
+
 
 @app.route('/process-pdf', methods=['POST'])
 def process_pdf():
