@@ -21,15 +21,38 @@ export default function ImportText() {
 	// TODO: Handle upload
 	function handleUpload() {
 		if (!textInput) return;
+
 		console.log("Uploading text...", textInput);
 
-		setTextInput("");
-		setTimeout(() => {
-			addSource({
-				name: "Text at " + new Date().toLocaleString().split(", ")[1],
-				summary: textInput,
+		// Call the new backend endpoint
+		fetch(process.env.NEXT_PUBLIC_API_URL + "/summarize-text", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				text: textInput,
+			}),
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error("Network response was not ok");
+				}
+				return response.json();
+			})
+			.then(data => {
+				// Add the summarized text to your sources
+				addSource({
+					id: data.id,
+					name: data.name,
+					summary: data.summary,
+				});
+
+				setTextInput(""); // Clear the input field
+			})
+			.catch(error => {
+				console.error("Error:", error);
 			});
-		}, 2000);
 	}
 
 	return (

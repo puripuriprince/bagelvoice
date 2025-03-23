@@ -39,7 +39,13 @@ const useChatStore = create((set, get) => ({
 			messages: [...state.messages, { id: newId, user, message, video }],
 		}));
 	},
-
+	modifyMessage: (id, message) => {
+		set(state => ({
+			messages: state.messages.map(msg =>
+				msg.id === id ? { ...msg, message } : msg,
+			),
+		}));
+	},
 	//// Add fake streaming functionality
 	streamMessage: (user, fullMessage, video) => {
 		// Create a new message with empty content

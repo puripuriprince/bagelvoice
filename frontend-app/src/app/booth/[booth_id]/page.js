@@ -153,6 +153,7 @@ export default function BoothPage() {
 		console.log(callOptions.find(x => x.name === callReceiver).description);
 		// Call your backend API
 		fetch(process.env.NEXT_PUBLIC_API_URL + "http://127.0.0.1:5000/api/chat", {
+		// fetch(process.env.NEXT_PUBLIC_API_URL + "/answer-question", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -179,7 +180,10 @@ export default function BoothPage() {
 				addMessage(
 					callReceiver,
 					data.answer,
-					process.env.NEXT_PUBLIC_API_URL + data.video,
+					// process.env.NEXT_PUBLIC_API_URL + data.video,
+					data.video
+						? process.env.NEXT_PUBLIC_API_URL + data.video
+						: null,
 				);
 				//streamMessage(
 				//	"James",

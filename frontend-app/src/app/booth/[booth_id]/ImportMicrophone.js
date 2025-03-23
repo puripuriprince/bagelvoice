@@ -121,34 +121,45 @@ export default function ImportMicrophone() {
 			return;
 		}
 
-		// TODO: Handle real file upload
-		setTimeout(() => {
-			addSource({
-				name: "Audio at " + new Date().toLocaleString().split(", ")[1],
-				summary: "Audio recording",
-			});
-		}, 2000);
-
 		try {
 			const formData = new FormData();
-			formData.append("audio", audioFile);
+			formData.append("file", audioFile);
 
 			const response = await fetch("http://127.0.0.1:5000/api/upload-video", {
 				method: "POST",
 				body: formData,
 			});
+			// Show loading state or spinner here if needed
+
+			// const response = await fetch(
+			// 	process.env.NEXT_PUBLIC_API_URL + "/summarize-audio",
+			// 	{
+			// 		method: "POST",
+			// 		body: formData,
+			// 	},
+			// );
 
 			if (response.ok) {
 				const data = await response.json();
-				//alert("Upload successful!");
 				console.log("Server response:", data);
+
+				// Add the source using the data from the API response
+				addSource({
+					id: data.id,
+					name: data.name,
+					summary: data.summary,
+					transcription: data.transcription,
+				});
+
 				// Close the dialog or perform additional actions
 			} else {
-				throw new Error("Upload failed");
+				const errorData = await response.json();
+				console.error("Upload failed:", errorData.error);
+				alert(`Upload failed: ${errorData.error || "Unknown error"}`);
 			}
 		} catch (error) {
-			//console.error("Error uploading file:", error);
-			//alert("There was an error uploading your file. Please try again.");
+			console.error("Error uploading file:", error);
+			alert("There was an error uploading your file. Please try again.");
 		}
 	};
 

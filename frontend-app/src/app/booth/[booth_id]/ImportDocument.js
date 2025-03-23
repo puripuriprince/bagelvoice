@@ -67,6 +67,60 @@ export default function ImportDocument() {
 			}
 		}, 2000);
 	  }
+	// 	if (files.length === 0) {
+	// 		alert("Please select files first");
+	// 		return;
+	// 	}
+
+	// 	const formData = new FormData();
+
+	// 	// Append all files to the FormData object
+	// 	for (const file of files) {
+	// 		formData.append("files", file);
+	// 	}
+
+	// 	// Show loading state (if you have one)
+	// 	// setIsLoading(true);
+
+	// 	// Make the request to your backend
+	// 	fetch(process.env.NEXT_PUBLIC_API_URL + "/summarize", {
+	// 		method: "POST",
+	// 		body: formData,
+	// 		// No need to set Content-Type header, it's automatically set with boundary for FormData
+	// 	})
+	// 		.then(response => {
+	// 			if (!response.ok) {
+	// 				throw new Error(`HTTP error! Status: ${response.status}`);
+	// 			}
+	// 			return response.json();
+	// 		})
+	// 		.then(data => {
+	// 			// Process the response and add each file to your sources
+	// 			data.results.forEach(result => {
+	// 				addSource({
+	// 					id: result.id,
+	// 					name: result.filename,
+	// 					summary:
+	// 						result.summary ||
+	// 						result.error ||
+	// 						"Failed to generate summary",
+	// 				});
+	// 			});
+
+	// 			// Clear the files state if you want to reset the file input
+	// 			setFiles([]);
+
+	// 			// Display success message
+	// 			alert(`Successfully processed ${data.results.length} files`);
+	// 		})
+	// 		.catch(error => {
+	// 			console.error("Error uploading files:", error);
+	// 			alert("Failed to upload files. See console for details.");
+	// 		});
+	// 	// .finally(() => {
+	// 	//   setIsLoading(false);
+	// 	// });
+	// }
 
 	return (
 		<Dialog>
