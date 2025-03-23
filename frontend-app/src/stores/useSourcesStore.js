@@ -2,30 +2,30 @@ import { create } from "zustand";
 
 const useSourcesStore = create(set => ({
 	sources: [
-		{
-			id: 1,
-			name: "slides 1",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
-		{
-			id: 2,
-			name: "slides 2",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
-		{
-			id: 3,
-			name: "lecture #1 recording",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
-		{
-			id: 4,
-			name: "lecture #2 recording",
-			summary: "This is a summary of the source",
-			selected: true,
-		},
+		//{
+		//	id: 1,
+		//	name: "slides 1",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
+		//{
+		//	id: 2,
+		//	name: "slides 2",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
+		//{
+		//	id: 3,
+		//	name: "lecture #1 recording",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
+		//{
+		//	id: 4,
+		//	name: "lecture #2 recording",
+		//	summary: "This is a summary of the source",
+		//	selected: true,
+		//},
 	],
 	setSources: sources => set({ sources }),
 	setSourceChecked: (id, checked) =>
@@ -44,6 +44,18 @@ const useSourcesStore = create(set => ({
 	deleteSource: async id => {
 		set(state => ({
 			sources: state.sources.filter(source => source.id !== id),
+		}));
+	},
+	addSource: async source => {
+		set(state => ({
+			sources: [
+				...state.sources,
+				{
+					id: Math.random(),
+					selected: true,
+					...source,
+				},
+			],
 		}));
 	},
 }));

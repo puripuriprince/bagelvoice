@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+import useSourcesStore from "@/stores/useSourcesStore";
 
 export default function ImportDocument() {
 	const [files, setFiles] = useState([]);
@@ -56,6 +57,15 @@ export default function ImportDocument() {
 		  .finally(() => {
 			setIsLoading(false);
 		  });
+
+		  setTimeout(() => {
+			for (const file of files) {
+				addSource({
+					name: file.name,
+					summary: "this is a file that was uploaded",
+				});
+			}
+		}, 2000);
 	  }
 
 	return (
@@ -80,7 +90,9 @@ export default function ImportDocument() {
 						multiple
 						onChange={e => setFiles(e.target.files)}
 					/>
-					<Button onClick={handleUpload}>Upload</Button>
+					<DialogClose asChild>
+						<Button onClick={handleUpload}>Upload</Button>
+					</DialogClose>
 					<DialogFooter></DialogFooter>
 				</DialogHeader>
 			</DialogContent>
