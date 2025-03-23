@@ -44,6 +44,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import useChatStore from "@/stores/useChatStore";
 import { useEffect, useRef, useState } from "react";
+import Message from "./Message";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -60,6 +61,7 @@ export default function BoothPage() {
 	const chatSummary = useChatStore(state => state.chatSummary);
 	const setChatSummary = useChatStore(state => state.setChatSummary);
 	const addMessage = useChatStore(state => state.addMessage);
+	const setSources = useSourcesStore(state => state.setSources);
 
 	function handleStartStudying() {
 		// TODO: Fetch the summary from the sources
@@ -122,6 +124,27 @@ In computers, this happens when different programs or processes are waiting for 
 				messagesContainerRef.current.scrollHeight;
 		}
 	}, [messages]); // Dependency array includes messages so it runs when messages update
+
+	useEffect(() => {
+		// FETCH THE SOURCES
+		setSources([
+			{
+				id: 1,
+				name: "Deadlocks",
+				selected: true,
+			},
+			{
+				id: 2,
+				name: "Starvation",
+				selected: true,
+			},
+			{
+				id: 3,
+				name: "Priority Inversion",
+				selected: true,
+			},
+		]);
+	}, []);
 
 	if (!booth) return null;
 	return (
@@ -196,32 +219,10 @@ In computers, this happens when different programs or processes are waiting for 
 									</div>
 									<hr className="mx-4" />
 									{messages.map(message => (
-										<div className="p-4" key={message.id}>
-											<div className="flex gap-4 items-center">
-												{message.user !== "Me" && (
-													<img
-														className={`rounded-full w-12 h-12 bg-white`}
-													/>
-												)}
-												<h2
-													className={`font-bold ${message.user === "Me" && "text-green-400"}`}
-												>
-													{message.user}
-												</h2>
-											</div>
-											<p className="mt-2">
-												{message.message}
-											</p>
-											{message.video && (
-												<video
-													type="video/mp4"
-													src={message.video}
-													controls
-													autoPlay
-													className="w-full mt-2"
-												/>
-											)}
-										</div>
+										<Message
+											message={message}
+											key={message.id}
+										/>
 									))}
 								</div>
 							</div>
