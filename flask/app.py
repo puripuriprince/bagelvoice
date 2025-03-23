@@ -13,17 +13,12 @@ from flask_cors import CORS
 import numpy as np
 import re
 from urllib.parse import quote
+from PyPDF2 import PdfReader
+import openai
+    
 
 # Add utils to path
 sys.path.append(os.path.join(os.path.dirname(__file__)))
-
-# Import custom modules
-try:
-    from utils import vid
-    HAS_VIDEO_MODULE = True
-except ImportError:
-    print("Video module not available. Video-related endpoints will be disabled.")
-    HAS_VIDEO_MODULE = False
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -43,9 +38,10 @@ from models.document_processor import DocumentProcessor
 from models.audio_processor import AudioProcessor
 from utils.session_manager import SessionManager
 from models.gemini_client import GeminiClient
-from models.vector_store import VectorStore
 
-from vs_store import query_database, connect_to_vstore, add_documents_to_vstore, add_pdf_to_vstore
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+from models.vector_store import query_database, connect_to_vstore, add_documents_to_vstore, get_documents_by_ids, ask_llm
 
 # Create Flask app
 app = Flask(__name__, static_folder='static')
@@ -55,15 +51,18 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 # Configure static folders for file storage
 app.config['PDF_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'pdfs')
 app.config['TEXT_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'texts')
+app.config['AUDIO_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'audios')
 app.config['TEMP_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'temp')
 
 # Create necessary folders
 os.makedirs(app.config['PDF_FOLDER'], exist_ok=True)
 os.makedirs(app.config['TEXT_FOLDER'], exist_ok=True)
+os.makedirs(app.config['AUDIO_FOLDER'], exist_ok=True)
 os.makedirs(app.config['TEMP_FOLDER'], exist_ok=True)
 
 print(f"PDF uploads will be stored in: {app.config['PDF_FOLDER']}")
 print(f"Text files will be stored in: {app.config['TEXT_FOLDER']}")
+print(f"Text files will be stored in: {app.config['AUDIO_FOLDER']}")
 
 # Enable CORS for all routes
 CORS(app)
@@ -79,19 +78,12 @@ if not os.environ.get('COHERE_API_KEY'):
     print("Warning: COHERE_API_KEY not found in environment variables")
     # You could set a default or raise an error here
 
-try:
-    gemini_client = GeminiClient()
-    print("Gemini client initialized successfully")
-except Exception as e:
-    print(f"Warning: Failed to initialize Gemini client: {e}")
-    gemini_client = None
-
-try:
-    vector_store = VectorStore()
-    print("Vector store initialized successfully")
-except Exception as e:
-    print(f"Warning: Vector store initialization failed: {e}")
-    vector_store = None
+# try:
+#     gemini_client = GeminiClient()
+#     print("Gemini client initialized successfully")
+# except Exception as e:
+#     print(f"Warning: Failed to initialize Gemini client: {e}")
+#     gemini_client = None
 
 def allowed_file(filename, file_type):
     """
@@ -168,13 +160,39 @@ def get_session(session_id):
         "conversation": conversation
     })
 
+def get_llm_summary(text): 
+    
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-pro",
+        temperature=0.2,  # Slightly higher for more natural teaching responses
+        max_tokens=None,
+        timeout=None,
+        max_retries=2,
+    )
+    
+    # Default question if none provided
+    student_question = "Can you summarize this and explain the key concepts?"
+    
+    prompt_template = (
+        "You are a helpful, friendly teaching assistant helping students understand complex topics.\n"
+        "Your goal is to make the information accessible, clear, and educational.\n\n"
+        "Please analyze the following text and:\n"
+        "1. Summarize the main points in a way that's easy to understand\n"
+        "2. Highlight 3-5 key concepts that are important for students to remember\n"
+        "3. Explain any technical terms in simple language\n"
+        "4. If relevant, provide a simple example to illustrate the concept\n\n"
+        "Student's question: {question}\n\n"
+        "Text to explain: {text}\n\n"
+        "Respond in a friendly, encouraging teaching style. Keep your explanation clear and concise."
+    )
+    
+    result = llm.invoke(prompt_template.format(question=student_question, text=text))
+    
+    return result.content
+
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """Upload a file and process it for RAG"""
-    # Check if session_id is provided
-    session_id = request.form.get('session_id')
-    if not session_id or not session_manager.get_session(session_id):
-        return jsonify({"error": "Invalid or missing session_id"}), 400
 
     # Check if file was uploaded
     if 'file' not in request.files:
@@ -185,7 +203,7 @@ def upload_file():
         return jsonify({"error": "No selected file"}), 400
 
     # Check if it's an allowed format
-    if not allowed_file(file.filename, ['pdf', 'txt']):
+    if file.filename.split('.')[1] not in ['pdf', 'txt']:
         return jsonify({"error": "Only PDF and text files are allowed"}), 400
 
     try:
@@ -205,206 +223,177 @@ def upload_file():
         # Generate a document ID
         document_id = f"doc_{uuid.uuid4().hex[:10]}"
 
-        # Process the document based on its type
+        text = ""
+
         if file_type == 'pdf':
-            # Process PDF directly with Gemini for text extraction and vectorization
-            if gemini_client and vector_store:
-                # Create extraction prompt for text contents
-                extraction_prompt = """
-                Extract all meaningful text content from this PDF document.
-                Include all text from paragraphs, headers, bullet points, tables, and captions.
-                Maintain the original structure as much as possible.
-                Do not include your own commentary or analysis.
-                """
+            reader = PdfReader(file_path)
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+            is_added, id = add_documents_to_vstore([text])
 
-                # Create lecture prompt for lecture creation
-                lecture_prompt = """
-                Create a comprehensive lecture from this document. Structure it with:
-
-                1. TITLE AND OVERVIEW:
-                   - Begin with a clear title based on the document content
-                   - Provide a brief overview of what the lecture will cover
-
-                2. INTRODUCTION:
-                   - Explain the main topic and its importance
-                   - Provide necessary background context
-                   - Outline the key learning objectives
-
-                3. MAIN CONTENT:
-                   - Organize into 3-5 clearly defined chapters with descriptive titles
-                   - Include subsections with key concepts, definitions, and explanations
-                   - Preserve any important formulas, theories, or methodologies
-                   - Describe any charts, diagrams, or visual elements present in the document
-
-                4. PRACTICAL APPLICATIONS:
-                   - Include examples of how the concepts are applied in real-world scenarios
-                   - Explain the practical significance of the material
-
-                5. CONCLUSION:
-                   - Summarize the key points from each section
-                   - Connect the concepts to broader themes or future directions
-                   - End with final thoughts on the importance of the material
-
-                Format it as a well-structured lecture that could be presented to university students.
-                Use Markdown formatting for better readability (headings with #, lists with -, etc.).
-                """
-
-                # First extract text for vectorization
-                print(f"Extracting text from PDF: {file_path}")
-                extract_result = gemini_client.process_pdf(file_path, prompt=extraction_prompt)
-                extracted_text = extract_result["text"]
-
-                # Save the extracted text
-                text_filename = f"{os.path.splitext(filename)[0]}_extracted.txt"
-                text_path = os.path.join(app.config['TEXT_FOLDER'], text_filename)
-                with open(text_path, 'w', encoding='utf-8') as f:
-                    f.write(extracted_text)
-
-                # Generate a lecture summary in parallel
-                print(f"Generating lecture from PDF: {file_path}")
-                lecture_result = gemini_client.process_pdf(file_path, prompt=lecture_prompt, use_pro_model=True)
-                lecture_text = lecture_result["text"]
-
-                # Save the lecture
-                lecture_filename = f"{os.path.splitext(filename)[0]}_lecture.md"
-                lecture_path = os.path.join(app.config['TEXT_FOLDER'], lecture_filename)
-                with open(lecture_path, 'w', encoding='utf-8') as f:
-                    f.write(lecture_text)
-
-                # Add to vector store
-                vector_success = vector_store.add_document(
-                    document_id=document_id,
-                    title=os.path.splitext(filename)[0],
-                    content=extracted_text,
-                    source_path=file_path,
-                    session_id=session_id,
-                    metadata={
-                        "file_type": "pdf",
-                        "original_filename": filename,
-                        "lecture_summary_path": lecture_path,
-                        "extracted_text_path": text_path
-                    }
-                )
-
-                # Add document to session
-                session_manager.add_document_to_session(session_id, document_id)
-
-                return jsonify({
-                    "success": True,
-                    "message": f"PDF '{filename}' processed successfully",
-                    "document_id": document_id,
-                    "vectorized": vector_success,
-                    "lecture_generated": True,
-                    "session_id": session_id,
-                    "file_path": file_path
-                })
-            else:
-                return jsonify({
-                    "error": "PDF processing unavailable. Required services not initialized."
-                }), 503
-
-        elif file_type == 'text':
-            # Process text file
+        if file_type == 'text':
             with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                text = f.read()
+            is_added, id = add_documents_to_vstore([text])
 
-            # Add to vector store if available
-            vector_success = False
-            if vector_store:
-                vector_success = vector_store.add_document(
-                    document_id=document_id,
-                    title=os.path.splitext(filename)[0],
-                    content=content,
-                    source_path=file_path,
-                    session_id=session_id,
-                    metadata={"file_type": "text", "original_filename": filename}
-                )
+        if text == "":
+            return jsonify({"error": "No text found in the document"}), 400
 
-            # Add document to session
-            session_manager.add_document_to_session(session_id, document_id)
+        summary = get_llm_summary(text)
+        print(summary)
 
+        if is_added:
+            print(f"Document added to vector store with ID: {id}")
             return jsonify({
                 "success": True,
-                "message": f"Text file '{filename}' processed successfully",
-                "document_id": document_id,
-                "vectorized": vector_success,
-                "session_id": session_id,
-                "file_path": file_path
+                "document_name": filename.split('.')[0],
+                "summary": summary,
+                "message": "Document processed and added to vector store",
+                "document_id": id
             })
+        else:
+            return jsonify({
+                "error": "Failed to add document to vector store"
+            }), 500
 
     except Exception as e:
         print(f"Error processing document: {e}")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/api/upload-video', methods=['POST'])
+def upload_video():
+    """Upload an audio file and transcribe it using OpenAI's Whisper model"""
+
+    # Check if file was uploaded
+    if 'audio' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    # Check if it's an allowed format
+    if file.filename.split('.')[-1] not in ['wav']:
+        return jsonify({"error": "Only WAV audio files are allowed"}), 400
+
+    try:
+        # Save the file with a secure filename
+        filename = secure_filename(file.filename)
+        
+        # Determine file paths
+        file_path_audio = os.path.join(app.config['AUDIO_FOLDER'], filename)
+        file_path_text = os.path.join(app.config['AUDIO_FOLDER'], filename.split('.')[0] + '.txt')
+        
+        # Save the audio file
+        file.save(file_path_audio)
+        
+        # Generate a document ID
+        document_id = f"doc_{uuid.uuid4().hex[:10]}"
+        
+        # Transcribe audio using OpenAI's Whisper (free tier)
+        client = openai.OpenAI()  # Uses OPENAI_API_KEY from environment variable
+        
+        with open(file_path_audio, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-1",  # Free tier model
+                file=audio_file
+            )
+        
+        # Get the transcribed text
+        text = transcription.text
+        
+        # Save transcription to text file
+        with open(file_path_text, 'w', encoding='utf-8') as f:
+            f.write(text)
+        
+        if not text:
+            return jsonify({"error": "No text found in the audio"}), 400
+        
+        # Add to vector store
+        is_added, id = add_documents_to_vstore([text])
+        
+        # Generate summary
+        summary = get_llm_summary(text)
+        print(summary)
+        
+        if is_added:
+            print(f"Document added to vector store with ID: {id}")
+            return jsonify({
+                "success": True,
+                "document_name": filename.split('.')[0],
+                "summary": summary,
+                "message": "Audio transcribed and added to vector store",
+                "document_id": id,
+                "transcription": text
+            })
+        else:
+            return jsonify({
+                "error": "Failed to add transcription to vector store"
+            }), 500
+            
+    except Exception as e:
+        print(f"Error processing audio: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """Handle chat requests with RAG integration"""
+    """
+    Handle chat requests with RAG integration
+    Supports:
+    - Chat history
+    - Specific document IDs for context
+    - Vector search for relevant content
+    """
     data = request.get_json()
 
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    # Get session ID and message
-    session_id = data.get('session_id')
-    message = data.get('message')
-
-    if not session_id or not session_manager.get_session(session_id):
-        return jsonify({"error": "Invalid or missing session_id"}), 400
-
+    message = data.get('question')
     if not message:
         return jsonify({"error": "No message provided"}), 400
-
-    # Retrieve conversation history
-    conversation_history = session_manager.format_for_cohere(session_id)
-
-    # Retrieve relevant document chunks
-    relevant_chunks = document_processor.retrieve_relevant_chunks(message, session_id=session_id)
-
+    
+    document_ids = data.get('document_ids', [])
+    chat_history = data.get('chat_history', [])
+    
+    # Format chat history if provided
+    # conversation_history = []
+    # if chat_history:
+    #     conversation_history = format_chat_history(chat_history)
+    # else:
+    #     # Use existing session history if available
+    #     conversation_history = session_manager.format_for_llm(session_id)
+    
+    # Prepare context from multiple sources
+    context = []
+    
+    # 1. Add context from specified document IDs
+    if document_ids:
+        document_context = get_documents_by_ids(document_ids)
+        if document_context:
+            context.extend(document_context)
+    
+    context.extend(query_database(message))
+    
+    # Prepare context for LLM
+    context_text = ""
+    if context:
+        context_text = "\n\n".join([chunk.get('content', '') for chunk in context])
+    
     try:
-        # Generate response using Cohere's RAG
-        response = cohere_client.chat_with_docs(message, relevant_chunks, conversation_history)
-
-        # Extract text and citations
-        response_text = response.text
-        citations = []
-        if hasattr(response, 'citations'):
-            # Format citations to be JSON-serializable
-            citations = [
-                {
-                    'text': citation.text,
-                    'start': citation.start,
-                    'end': citation.end,
-                    'sources': [
-                        {
-                            'document_id': source.id,
-                            'title': source.document.get('title', ''),
-                            'snippet': source.document.get('snippet', '')
-                        }
-                        for source in citation.sources
-                    ]
-                }
-                for citation in response.citations
-            ]
-
-        # Add messages to conversation history
-        session_manager.add_message_to_conversation(session_id, 'user', message)
-        session_manager.add_message_to_conversation(
-            session_id,
-            'assistant',
-            response_text,
-            metadata={'citations': citations}
-        )
+        response = ask_llm(message, context_text)
 
         return jsonify({
-            "message": response_text,
-            "citations": citations,
-            "has_context": len(relevant_chunks) > 0,
-            "context_count": len(relevant_chunks),
-            "conversation_id": len(session_manager.get_conversation(session_id)) // 2  # Count of conversation turns
+            "success": True,
+            "message": response
         })
 
     except Exception as e:
+        print(f"Error in chat endpoint: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/documents', methods=['GET'])
@@ -426,12 +415,8 @@ def process_raw_text():
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    session_id = data.get('session_id')
     text_content = data.get('text')
     text_title = data.get('title', 'User provided text')
-
-    if not session_id or not session_manager.get_session(session_id):
-        return jsonify({"error": "Invalid or missing session_id"}), 400
 
     if not text_content:
         return jsonify({"error": "No text content provided"}), 400
@@ -445,18 +430,24 @@ def process_raw_text():
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(text_content)
 
-        # Process the text directly (create chunks and embeddings)
-        doc_id = document_processor.process_text(text_content, text_title, session_id, file_path)
+        is_added, id = add_documents_to_vstore([text_content])
 
-        # Add document to session
-        session_manager.add_document_to_session(session_id, doc_id)
+        summary = get_llm_summary(text)
+        print(summary)
 
-        return jsonify({
-            "success": True,
-            "message": "Text processed successfully",
-            "document_id": doc_id,
-            "session_id": session_id
-        })
+        if is_added:
+            print(f"Document added to vector store with ID: {id}")
+            return jsonify({
+                "success": True,
+                "document_name": filename.split('.')[0],
+                "summary": summary,
+                "message": "Document processed and added to vector store",
+                "document_id": id
+            })
+        else:
+            return jsonify({
+                "error": "Failed to add document to vector store"
+            }), 500
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1000,9 +991,6 @@ def search():
     - document_id: Filter to a specific document
     - session_id: Filter to a specific session
     """
-    # Verify vector store is available
-    if not vector_store:
-        return jsonify({"error": "Vector store is not available"}), 503
 
     # Get JSON data
     data = request.json

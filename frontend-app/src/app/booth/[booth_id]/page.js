@@ -50,6 +50,10 @@ import Link from "next/link";
 import useChatStore from "@/stores/useChatStore";
 import { useEffect, useRef, useState } from "react";
 import Message from "./Message";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -61,14 +65,6 @@ export default function BoothPage() {
 	const setCallReceiver = useCallStore(state => state.setCallReceiver);
 	const messages = useChatStore(state => state.messages);
 	const messagesContainerRef = useRef(null);
-
-	// useEffect(() => {
-	// 	if (messagesContainerRef.current) {
-	// 		messagesContainerRef.current.scrollTop =
-	// 			messagesContainerRef.current.scrollHeight;
-	// 	}
-	// }, [messages]); // Dependency array includes messages so it runs when messages update
-
 	const isStarted = useChatStore(state => state.isStarted);
 	const setIsStarted = useChatStore(state => state.setIsStarted);
 	const chatSummary = useChatStore(state => state.chatSummary);
@@ -79,34 +75,58 @@ export default function BoothPage() {
 	const [isCallActive, setIsCallActive] = useState(false);
 	const mediaRecorderRef = useRef(null);
 	const streamRef = useRef(null);
+	const [startClicked, setStartClicked] = useState(false);
 
 	function handleStartStudying() {
-		// TODO: Fetch the summary from the sources
-		setTimeout(() => {
-			setChatSummary(
-				`
-Deadlocks Summary:
+		setStartClicked(true);
+		// Get all the summaries from your sources
+		const sources = useSourcesStore.getState().sources;
 
-    Liveness: A system must ensure that processes make progress. Indefinite waiting (like waiting for a mutex or semaphore forever) is a liveness failure.
+		if (sources.length === 0) {
+			alert("Please upload some files first");
+			return;
+		}
 
-    Deadlock: Happens when two or more processes wait indefinitely for an event that only one of them can trigger. Example:
+		const summaries = sources
+			.filter(source => source.selected)
+			.map(source => source.summary);
 
-        P₀ locks S and waits for Q.
+		// Optional: Show loading state
+		// setIsLoading(true);
 
-        P₁ locks Q and waits for S.
+		fetch(process.env.NEXT_PUBLIC_API_URL + "/meta-summarize", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				summaries: summaries,
+				title: "Study Materials",
+			}),
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				// Set the chat summary with the meta-summary from the backend
+				setChatSummary(data.meta_summary);
+				setIsStarted(true);
+			})
+			.catch(error => {
+				console.error("Error generating study summary:", error);
+				alert(
+					"Failed to generate study summary. See console for details.",
+				);
 
-        Neither can proceed, causing a deadlock.
-
-    Other related issues:
-
-        Starvation: A process may never get a needed resource if others keep taking priority.
-
-        Priority Inversion: A high-priority process gets blocked because a lower-priority process holds a required lock. Solved using priority inheritance.
-`.trim(),
-			);
-		}, 1000);
-
-		setIsStarted(true);
+				// Fallback to starting anyway without a summary
+				setIsStarted(true);
+			});
+		// .finally(() => {
+		//   setIsLoading(false);
+		// });
 	}
 
 	const [chatBoxInput, setChatBoxInput] = useState("");
@@ -114,25 +134,71 @@ Deadlocks Summary:
 	function handleSendMessage() {
 		if (chatBoxInput === "") return;
 
+		// Add user message to the chat
 		addMessage("Me", chatBoxInput);
+
+		// Get the question from input
+		const question = chatBoxInput;
+
+		// Clear input field
 		setChatBoxInput("");
-		setTimeout(() => {
-			streamMessage(
-				"James",
-				`
-Alright! Imagine you and your friend are playing with toy cars. You each have one car, but you both want the same second car to complete your race.
 
-    You are holding Car A and waiting for Car B.
+		// Get all sources or just selected sources if you have a selection mechanism
+		const sources = useSourcesStore.getState().sources;
+		// If you have a way to track selected sources, use that instead
+		// const selectedSources = sources.filter(source => selectedSourceIds.includes(source.id));
 
-    Your friend is holding Car B and waiting for Car A.
-
-But neither of you wants to let go of your car first! So now, both of you are stuck, unable to play. This is a deadlock—no one can move forward because each person is waiting for something the other won't give up.
-
-In computers, this happens when different programs or processes are waiting for resources (like memory, files, or devices) that another process is holding, and no one can continue.
-`.trim(),
-				"/test-video.mp4",
-			);
-		}, 2000);
+		// Show loading state if needed
+		// setIsLoading(true);
+		console.log(callOptions.find(x => x.name === callReceiver).description);
+		// Call your backend API
+		fetch(process.env.NEXT_PUBLIC_API_URL + "http://127.0.0.1:5000/api/chat", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				question: question,
+				summaries: sources.map(source => ({
+					id: source.id,
+					name: source.name,
+					summary: source.summary,
+				})),
+				personality: callOptions.find(x => x.name === callReceiver)
+					.description,
+			}),
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then(data => {
+				// Stream the AI's answer with references
+				addMessage(
+					callReceiver,
+					data.answer,
+					process.env.NEXT_PUBLIC_API_URL + data.video,
+				);
+				//streamMessage(
+				//	"James",
+				//	data.answer,
+				//	//"/sample-video.mp4", // Keep your video if needed
+				//	data.references, // Pass references for citation linking
+				//);
+			})
+			.catch(error => {
+				console.error("Error getting answer:", error);
+				// Handle error - add an error message to the chat
+				addMessage(
+					"System",
+					"Sorry, I couldn't generate an answer at this time. Please try again.",
+				);
+			});
+		// .finally(() => {
+		//   setIsLoading(false);
+		// });
 	}
 
 	// Function to toggle microphone for call
@@ -186,23 +252,23 @@ In computers, this happens when different programs or processes are waiting for 
 	}, [messages]); // Dependency array includes messages so it runs when messages update
 
 	useEffect(() => {
-		// FETCH THE SOURCES
+		// TODO: FETCH THE SOURCES
 		setSources([
-			{
-				id: 1,
-				name: "Deadlocks",
-				selected: true,
-			},
-			{
-				id: 2,
-				name: "Starvation",
-				selected: true,
-			},
-			{
-				id: 3,
-				name: "Priority Inversion",
-				selected: true,
-			},
+			//{
+			//	id: 1,
+			//	name: "Deadlocks",
+			//	selected: true,
+			//},
+			//{
+			//	id: 2,
+			//	name: "Starvation",
+			//	selected: true,
+			//},
+			//{
+			//	id: 3,
+			//	name: "Priority Inversion",
+			//	selected: true,
+			//},
 		]);
 	}, []);
 
@@ -260,6 +326,7 @@ In computers, this happens when different programs or processes are waiting for 
 									<Button
 										className={"w-full mt-4"}
 										onClick={handleStartStudying}
+										disabled={startClicked}
 									>
 										Start Studying
 									</Button>
@@ -280,11 +347,16 @@ In computers, this happens when different programs or processes are waiting for 
 									}}
 								>
 									<div className="p-4 text-white/50">
-										<p>
-											{chatSummary === ""
-												? "Summary is being generated, please wait ..."
-												: chatSummary}
-										</p>
+										{chatSummary === "" ? (
+											"Summary is being generated, please wait ..."
+										) : (
+											<ReactMarkdown
+												remarkPlugins={[remarkMath]}
+												rehypePlugins={[rehypeKatex]}
+											>
+												{chatSummary}
+											</ReactMarkdown>
+										)}
 									</div>
 									<hr className="mx-4" />
 									{messages.map(message => (

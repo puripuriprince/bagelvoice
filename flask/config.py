@@ -24,7 +24,7 @@ AUDIO_FOLDER = os.path.join(UPLOAD_FOLDER, 'audio')
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {
     'pdf': {'pdf'},
-    'text': {'txt', 'md'},
+    'text': {'txt'},
     'audio': {'mp3', 'wav'},
 }
 

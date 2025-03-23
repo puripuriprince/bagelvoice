@@ -133,7 +133,7 @@ export default function ImportMicrophone() {
 			const formData = new FormData();
 			formData.append("audio", audioFile);
 
-			const response = await fetch("/api/upload-audio", {
+			const response = await fetch("http://127.0.0.1:5000/api/upload-video", {
 				method: "POST",
 				body: formData,
 			});

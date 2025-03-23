@@ -1,0 +1,39 @@
+att 25 ;# ne sera pas exécuté
+dal 2 ;% ne sera pas exécuté
+dbt ;# début de l'exécution
+dal 1 ;# allumer la DEL en vert
+att 10 ;# attendre 250 ms
+dal 2 ;# allumer la DEL en rouge
+dal 2 ;// ne fera rien puisque la DEL est déjà en rouge
+att 20 ;# attendre 500 ms
+det ;// éteindre la DEL
+det ;# instruction sans effet puisque rien n’est allumé
+sgo 69 ;# émettre un son à 440 Hz
+att 20 ;# attendre 500 s
+sgo 200 ;# instruction ignorée
+att 20 ;# attendre 500 s
+sgo 45 ;// émettre un son à 110 Hz
+att 40 ;# attendre 1 s
+sar ;# arrêter de jouer un son
+att 40 ;# attendre 1 s
+mav 0 ;% Le robot reste immobile
+att 80 ;# attendre 2 s
+mav 255 ;# avance avec une vitesse de 100% 
+att 80 ;# attendre 2 s
+mav 128 ;# vitesse de 50% (50% du PWM)
+att 80 ;# attendre 2 s
+mar ;# Arrêter
+mre 0 ;// robot reste immobile
+att 80 ;# attendre 2 s
+mre 255 ;# vitesse maximale vers l'arrière
+att 80 ;# attendre 2 s
+mre 64 ;# vitesse de 25% vers l'arrière (25% du PWM)
+att 80 ;# attendre 2 s
+dbc 4;#début du boucle
+trd ;#virage du robot de 90 degrés à droite
+att 80 ;# attendre 2 s
+trg ;#virage du robot de 90 degrés à gauche
+att 80 ;# attendre 2 s
+fbc ;#fin du boucle
+fin ;#fin du programme et robot immobile
+att 25 ;# instruction qui ne sera même pas lue

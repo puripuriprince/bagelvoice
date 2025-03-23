@@ -34,7 +34,7 @@ export default function ImportDocument() {
 		  formData.append(`file`, file);
 		});
 		
-		fetch('http://127.0.0.1:5000/api/process-document', {
+		fetch('http://127.0.0.1:5000/api/upload', {
 		  method: 'POST',
 		  body: formData,
 		})
