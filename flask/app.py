@@ -69,8 +69,31 @@ except Exception as e:
     vector_store = None
 
 def allowed_file(filename, file_type):
-    """Check if a file has an allowed extension"""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS.get(file_type, set())
+    """
+    Check if a file has an allowed extension
+
+    Args:
+        filename (str): The filename to check
+        file_type (str or list): File type(s) to check against, can be a single string or a list of strings
+
+    Returns:
+        bool: True if the file extension is allowed, False otherwise
+    """
+    if not filename or '.' not in filename:
+        return False
+
+    extension = filename.rsplit('.', 1)[1].lower()
+
+    # Handle both string and list file_type
+    if isinstance(file_type, list):
+        # If file_type is a list, check against each type in the list
+        allowed_extensions = set()
+        for ftype in file_type:
+            allowed_extensions.update(ALLOWED_EXTENSIONS.get(ftype, set()))
+        return extension in allowed_extensions
+    else:
+        # If file_type is a string, check against that type only
+        return extension in ALLOWED_EXTENSIONS.get(file_type, set())
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -677,34 +700,82 @@ def process_pdf():
         # Generate a document ID
         document_id = f"doc_{uuid.uuid4().hex[:10]}"
 
-        # Extract text from PDF using a simple approach (install PyPDF2 if needed)
+        # Extract text from PDF using Gemini
         extracted_text = "Text extraction not available"
         text_path = None
+        vectorization_success = False
 
         try:
-            # First try using PyPDF2
-            try:
-                import PyPDF2
-                with open(file_path, 'rb') as pdf_file:
-                    pdf_reader = PyPDF2.PdfReader(pdf_file)
-                    pdf_text = ""
-                    for page_num in range(len(pdf_reader.pages)):
-                        page = pdf_reader.pages[page_num]
-                        pdf_text += page.extract_text() + "\n\n"
+            # Check if Gemini client is available
+            if gemini_client:
+                print(f"Using Gemini to extract text from {file_path}")
 
-                    extracted_text = pdf_text
-            except (ImportError, Exception) as e:
-                print(f"PyPDF2 error: {e}")
-                # If PyPDF2 is not available or fails, try a different approach
-                # You might want to install pdfplumber or other PDF libraries
+                # Create extraction prompt for text contents
+                extraction_prompt = """
+                Extract all meaningful text content from this PDF document.
+                Include all text from paragraphs, headers, bullet points, tables, and captions.
+                Maintain the original structure as much as possible.
+                Do not include your own commentary or analysis.
+                """
 
-            # Save the extracted text
-            if extracted_text and extracted_text != "Text extraction not available":
+                # Extract text with Gemini
+                extract_result = gemini_client.process_pdf(file_path, prompt=extraction_prompt)
+                extracted_text = extract_result["text"]
+
+                # Save the extracted text
                 text_filename = f"{os.path.splitext(filename)[0]}_extracted.txt"
                 text_path = os.path.join(text_folder, text_filename)
                 with open(text_path, 'w', encoding='utf-8') as f:
                     f.write(extracted_text)
                 print(f"Extracted text saved to {text_path}")
+
+                # Add to vector store if available
+                if vector_store:
+                    print(f"Adding document to vector store...")
+                    vector_success = vector_store.add_document(
+                        document_id=document_id,
+                        title=os.path.splitext(filename)[0],
+                        content=extracted_text,
+                        source_path=file_path,
+                        metadata={
+                            "file_type": "pdf",
+                            "original_filename": filename,
+                            "extracted_text_path": text_path
+                        }
+                    )
+
+                    if vector_success:
+                        print(f"Document successfully added to vector store")
+                        vectorization_success = True
+                    else:
+                        print(f"Failed to add document to vector store")
+                else:
+                    print("Vector store not available, falling back to text extraction only")
+            else:
+                print("Gemini client not available, falling back to PyPDF2")
+
+                # Fall back to PyPDF2 if Gemini is not available
+                try:
+                    import PyPDF2
+                    with open(file_path, 'rb') as pdf_file:
+                        pdf_reader = PyPDF2.PdfReader(pdf_file)
+                        pdf_text = ""
+                        for page_num in range(len(pdf_reader.pages)):
+                            page = pdf_reader.pages[page_num]
+                            pdf_text += page.extract_text() + "\n\n"
+
+                        extracted_text = pdf_text
+
+                    # Save the extracted text
+                    text_filename = f"{os.path.splitext(filename)[0]}_extracted.txt"
+                    text_path = os.path.join(text_folder, text_filename)
+                    with open(text_path, 'w', encoding='utf-8') as f:
+                        f.write(extracted_text)
+                    print(f"Extracted text saved to {text_path}")
+
+                except Exception as e:
+                    print(f"PyPDF2 error: {e}")
+
         except Exception as e:
             print(f"Error extracting text: {e}")
             import traceback
@@ -720,7 +791,8 @@ def process_pdf():
                 "extracted_text": text_path
             },
             "text_preview": extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text,
-            "has_text_extraction": extracted_text != "Text extraction not available"
+            "has_text_extraction": extracted_text != "Text extraction not available",
+            "vectorized": vectorization_success
         })
 
     except Exception as e:
