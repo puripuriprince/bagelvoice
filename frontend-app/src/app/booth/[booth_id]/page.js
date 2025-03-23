@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import useSourcesStore from "@/stores/useSourcesStore";
 import {
+	ArrowUturnLeftIcon,
 	Bars3Icon,
 	DocumentIcon,
 	DocumentPlusIcon,
@@ -40,6 +41,7 @@ import {
 	DialogClose,
 } from "@/components/ui/dialog";
 import { Card, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -53,7 +55,9 @@ export default function BoothPage() {
 	return (
 		<div className="h-full flex flex-col">
 			<h1 className="border-b p-6 flex items-center gap-6 text-2xl font-bold">
-				<Bars3Icon className="w-8 h-8" />
+				<Link href="/">
+					<ArrowUturnLeftIcon className="w-8 h-8 cursor-pointer" />
+				</Link>
 				{booth.name}
 			</h1>
 			<div className="flex grow">
