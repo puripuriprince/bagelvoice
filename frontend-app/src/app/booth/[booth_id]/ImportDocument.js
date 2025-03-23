@@ -38,7 +38,7 @@ export default function ImportDocument() {
 		// setIsLoading(true);
 
 		// Make the request to your backend
-		fetch("http://localhost:8080/summarize", {
+		fetch(process.env.NEXT_PUBLIC_API_URL + "/summarize", {
 			method: "POST",
 			body: formData,
 			// No need to set Content-Type header, it's automatically set with boundary for FormData

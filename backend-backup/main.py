@@ -116,7 +116,7 @@ def render_manim_video(manim_code, video_path, video_filename):
 
         # Run Manim to generate the video
         subprocess.run(
-            ["python", "-m", "manim", temp_file, "MainScene", "-o", video_filename],
+            ["python3", "-m", "manim", temp_file, "MainScene", "-o", video_filename],
             check=True,
         )
 
@@ -454,7 +454,7 @@ def answer_question():
 
         # Add video URL to response if a video is needed
         if needs_video and video_url:
-            result["video"] = f"http://localhost:8080{video_url}"
+            result["video"] = video_url
 
             # Start video generation in a background thread
             def generate_video_async():

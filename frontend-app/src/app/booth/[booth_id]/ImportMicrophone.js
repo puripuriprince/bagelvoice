@@ -128,7 +128,7 @@ export default function ImportMicrophone() {
 			// Show loading state or spinner here if needed
 
 			const response = await fetch(
-				"http://localhost:8080/summarize-audio",
+				process.env.NEXT_PUBLIC_API_URL + "/summarize-audio",
 				{
 					method: "POST",
 					body: formData,
