@@ -95,51 +95,91 @@ def generate_manim_code(question, answer):
         messages=[
             {
                 "role": "system",
-                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Generate complete, self-contained Manim code that can be executed directly to produce an educational video.",
+                "content": "You are a Python programming assistant specialized in creating Manim animations to explain concepts visually. Generate complete, self-contained Manim code that can be executed directly to produce an educational video. You only reply with the code, no commentary. No backticks, no ```python, no code blocks, no nothing. Just the code.",
             },
             {
                 "role": "user",
-                "content": f"Create Manim code to generate a short educational video explaining the following question and answer. The code should be complete and ready to run. The animation should be visually engaging and clearly explain the concept.\n\nQuestion: {question}\n\nAnswer: {answer[:1000]}",
+                "content": f"Create Manim code to generate a short educational video explaining the following question and answer. The code should be complete and ready to run. The animation should be visually engaging and clearly explain the concept.\n\nQuestion: {question}\n\nAnswer: {answer[:1000]}. You must reply with ONLY the manim code, nothing else. It should be runnable, and is NOT A CODE BLOCK.",
             },
         ],
     )
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    if content.startswith("```python"):
+        content = content[len("```python") :]
+    if content.endswith("```"):
+        content = content[: -len("```")]
+    return content
 
 
 # Function to render Manim video asynchronously
 def render_manim_video(manim_code, video_path, video_filename):
     try:
+        # Create a unique identifier once and reuse it
+        unique_id = video_filename
+
         # Create a temporary Python file with the Manim code
-        temp_file = f"temp_manim_{uuid.uuid4()}.py"
+        temp_file = f"temp_manim_{unique_id}.py"
         with open(temp_file, "w") as f:
             f.write(manim_code)
 
         # Run Manim to generate the video
+        # Note: Manim typically puts output in media/videos/[filename]/[quality]/[scene_name].mp4
+        print("BEFORE RUN ASDJASJDSAJD")
         subprocess.run(
-            ["python", "-m", "manim", temp_file, "MainScene", "-o", video_filename],
+            ["python3", "-m", "manim", temp_file, "MainScene", "-o", video_filename],
             check=True,
         )
 
-        # Move the generated video to the designated path
-        source_video = f"media/videos/temp_manim_{uuid.uuid4()}/1080p60/MainScene.mp4"
-        if os.path.exists(source_video):
-            os.rename(source_video, video_path)
+        # The file name (without .py) is what Manim uses for the directory
+        base_name = os.path.splitext(os.path.basename(temp_file))[0]
+        print("BASE NAME", base_name)
+
+        # Look for the generated video in the expected location
+        expected_dir = f"media/videos/{base_name}"
+        if os.path.exists(expected_dir):
+            # Look for the quality directories (1080p60, etc.)
+            for quality_dir in os.listdir(expected_dir):
+                quality_path = os.path.join(expected_dir, quality_dir)
+                if os.path.isdir(quality_path):
+                    # Look for the MainScene.mp4 file
+                    for video_file in os.listdir(quality_path):
+                        if video_file.endswith(".mp4"):
+                            source_video = os.path.join(quality_path, video_file)
+                            # Ensure the target directory exists
+                            os.makedirs(os.path.dirname(video_path), exist_ok=True)
+                            # Move the file to the static directory
+                            os.rename(source_video, video_path)
+                            print(f"Successfully moved video from {source_video} to {video_path}")
+                            break
+        else:
+            # Fallback: Try to find the video file anywhere in the media directory
+            for root, dirs, files in os.walk("media"):
+                for file in files:
+                    if file.endswith(".mp4") and "MainScene" in file:
+                        source_video = os.path.join(root, file)
+                        # Ensure the target directory exists
+                        os.makedirs(os.path.dirname(video_path), exist_ok=True)
+                        # Move the file to the static directory
+                        os.rename(source_video, video_path)
+                        print(f"Fallback: Moved video from {source_video} to {video_path}")
+                        break
 
         # Clean up the temporary file
         if os.path.exists(temp_file):
             os.remove(temp_file)
+            print(f"Removed temporary file: {temp_file}")
 
     except Exception as e:
         print(f"Error generating video: {str(e)}")
-        # Create an error log file
+        # Create an error log file with detailed information
         with open(f"{video_path}.error.log", "w") as f:
             f.write(f"Error generating video: {str(e)}\n\nManim Code:\n{manim_code}")
-
 
 # Serve static files
 @app.route("/static/videos/<path:filename>")
 def serve_video(filename):
-    return send_from_directory(VIDEOS_DIR, filename)
+    # media/videos/temp_manim_{filename}/1080p60/{filename}.mp4
+    return send_from_directory(f"media/videos/temp_manim_{filename}/1080p60", filename)
 
 
 @app.route("/summarize", methods=["GET"])
@@ -454,7 +494,7 @@ def answer_question():
 
         # Add video URL to response if a video is needed
         if needs_video and video_url:
-            result["video"] = f"http://localhost:8080{video_url}"
+            result["video"] = video_url
 
             # Start video generation in a background thread
             def generate_video_async():
