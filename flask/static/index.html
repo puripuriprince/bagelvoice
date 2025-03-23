@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notebook RAG System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .panel {
+            flex: 1;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .full-width {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #sessionDisplay {
+            background-color: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        #chat-history {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: white;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .user-message {
+            background-color: #e8f4fd;
+            text-align: right;
+            margin-left: 20%;
+        }
+        .assistant-message {
+            background-color: #f1f1f1;
+            margin-right: 20%;
+        }
+        #documents-list {
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 15px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        .document-item {
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .document-item:hover {
+            background-color: #f5f5f5;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 10px 15px;
+            background-color: #eee;
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin: 10px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Notebook RAG System</h1>
+        <p>Upload documents, ask questions, and get answers powered by RAG</p>
+    </header>
+
+    <div id="sessionDisplay">
+        <p id="sessionInfo">No active session</p>
+        <button id="createSession">Create New Session</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Document Management</h2>
+            <form id="uploadForm">
+                <label for="fileUpload">Upload PDF or Text File:</label>
+                <input type="file" id="fileUpload" accept=".pdf,.txt" />
+                <button type="submit" id="uploadButton">Upload Document</button>
+            </form>
+            <div class="loader" id="uploadLoader"></div>
+            <div id="uploadStatus"></div>
+
+            <h3>Your Documents</h3>
+            <div id="documents-list"></div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="document-content">Content</div>
+                <div class="tab" data-tab="document-lecture">Lecture</div>
+            </div>
+
+            <div class="tab-content active" id="document-content">
+                <h3>Document Content</h3>
+                <div id="documentContent" style="max-height: 300px; overflow-y: auto; padding: 10px; background-color: white; border: 1px solid #ddd;"></div>
+            </div>
+
+            <div class="tab-content" id="document-lecture">
+                <h3>Lecture Notes</h3>
+                <div id="documentLecture" style="max-height: 300px; overflow-y: auto; padding: 10px; background-color: white; border: 1px solid #ddd;"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>RAG Chat</h2>
+            <div id="chat-history"></div>
+            <div class="loader" id="chatLoader"></div>
+
+            <form id="chatForm">
+                <textarea id="userQuery" rows="3" placeholder="Ask a question about your documents..."></textarea>
+                <button type="submit" id="sendQuery">Send Question</button>
+            </form>
+
+            <div id="sourceContext" style="margin-top: 20px;">
+                <h3>Sources Used</h3>
+                <div id="sources" style="font-size: 0.9em; color: #666;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let currentDocumentId = null;
+
+        // DOM elements
+        const createSessionBtn = document.getElementById('createSession');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const uploadForm = document.getElementById('uploadForm');
+        const chatForm = document.getElementById('chatForm');
+        const documentsList = document.getElementById('documents-list');
+        const documentContent = document.getElementById('documentContent');
+        const documentLecture = document.getElementById('documentLecture');
+        const chatHistory = document.getElementById('chat-history');
+        const sources = document.getElementById('sources');
+        const uploadLoader = document.getElementById('uploadLoader');
+        const chatLoader = document.getElementById('chatLoader');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+                // Add active class to clicked tab
+                this.classList.add('active');
+
+                // Show corresponding content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Create session
+        createSessionBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_info: {
+                            name: 'Test User',
+                            topic: 'RAG Testing'
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                sessionId = data.session_id;
+                sessionInfo.textContent = `Active Session: ${sessionId}`;
+
+                // Load documents for this session
+                loadDocuments();
+
+            } catch (error) {
+                console.error('Error creating session:', error);
+                alert('Failed to create session. See console for details.');
+            }
+        });
+
+        // Upload document
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!sessionId) {
+                alert('Please create a session first');
+                return;
+            }
+
+            const fileInput = document.getElementById('fileUpload');
+            if (!fileInput.files.length) {
+                alert('Please select a file to upload');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('session_id', sessionId);
+
+            uploadLoader.style.display = 'block';
+            uploadStatus.innerHTML = 'Uploading and processing document...';
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    uploadStatus.innerHTML = `<p style="color:green">${data.message}</p>`;
+                    loadDocuments();
+                } else {
+                    uploadStatus.innerHTML = `<p style="color:red">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Error uploading document:', error);
+                uploadStatus.innerHTML = `<p style="color:red">Upload failed: ${error.message}</p>`;
+            } finally {
+                uploadLoader.style.display = 'none';
+            }
+        });
+
+        // Load documents
+        async function loadDocuments() {
+            if (!sessionId) return;
+
+            try {
+                const response = await fetch(`/api/documents?session_id=${sessionId}`);
+                const data = await response.json();
+
+                // Clear the list
+                documentsList.innerHTML = '';
+
+                if (!data.documents || data.documents.length === 0) {
+                    documentsList.innerHTML = '<p>No documents uploaded yet</p>';
+                    return;
+                }
+
+                // Display documents
+                data.documents.forEach(doc => {
+                    const docElement = document.createElement('div');
+                    docElement.className = 'document-item';
+                    docElement.textContent = doc.title || doc.filename || doc.document_id;
+                    docElement.dataset.documentId = doc.document_id;
+
+                    docElement.addEventListener('click', () => {
+                        loadDocumentContent(doc.document_id);
+                    });
+
+                    documentsList.appendChild(docElement);
+                });
+
+            } catch (error) {
+                console.error('Error loading documents:', error);
+                documentsList.innerHTML = '<p>Error loading documents</p>';
+            }
+        }
+
+        // Load document content
+        async function loadDocumentContent(documentId) {
+            if (!documentId) return;
+
+            currentDocumentId = documentId;
+
+            try {
+                // Load document content
+                const contentResponse = await fetch(`/api/documents/${documentId}`);
+                if (contentResponse.ok) {
+                    const contentData = await contentResponse.json();
+
+                    // Update content tab
+                    documentContent.innerHTML = `<h4>${contentData.title}</h4><p>${contentData.content}</p>`;
+
+                    // Try to load lecture if available
+                    try {
+                        const lectureResponse = await fetch(`/api/documents/${documentId}/lecture`);
+                        if (lectureResponse.ok) {
+                            const lectureData = await lectureResponse.json();
+                            documentLecture.innerHTML = `<h4>${contentData.title} - Lecture Notes</h4><div>${lectureData.lecture}</div>`;
+                        } else {
+                            documentLecture.innerHTML = '<p>No lecture notes available for this document</p>';
+                        }
+                    } catch (lectureError) {
+                        console.error('Error loading lecture:', lectureError);
+                        documentLecture.innerHTML = '<p>Error loading lecture notes</p>';
+                    }
+                } else {
+                    documentContent.innerHTML = '<p>Failed to load document content</p>';
+                    documentLecture.innerHTML = '<p>No lecture notes available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading document content:', error);
+                documentContent.innerHTML = '<p>Error loading content</p>';
+            }
+        }
+
+        // Handle chat form submission
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!sessionId) {
+                alert('Please create a session first');
+                return;
+            }
+
+            const queryInput = document.getElementById('userQuery');
+            const query = queryInput.value.trim();
+
+            if (!query) {
+                alert('Please enter a question');
+                return;
+            }
+
+            // Add user message to chat
+            addMessageToChat('user', query);
+
+            // Clear input
+            queryInput.value = '';
+
+            // Show loader
+            chatLoader.style.display = 'block';
+
+            try {
+                // Send request to RAG API
+                const response = await fetch('/api/rag', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        session_id: sessionId,
+                        document_id: currentDocumentId // Optional - can be null for all documents
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Add response to chat
+                    addMessageToChat('assistant', data.answer);
+
+                    // Display sources
+                    displaySources(data.chunks);
+                } else {
+                    addMessageToChat('assistant', `Error: ${data.error || 'Failed to get response'}`);
+                    sources.innerHTML = '';
+                }
+            } catch (error) {
+                console.error('Error querying RAG:', error);
+                addMessageToChat('assistant', `Error: ${error.message}`);
+                sources.innerHTML = '';
+            } finally {
+                chatLoader.style.display = 'none';
+            }
+        });
+
+        // Add message to chat history
+        function addMessageToChat(role, content) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${role}-message`;
+
+            // For assistants, handle potential markdown
+            if (role === 'assistant') {
+                // Simple markdown-like formatting for code blocks
+                content = content.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+                // Bold
+                content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                // Italic
+                content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+                // Headers
+                content = content.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+                content = content.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+                content = content.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+                // Lists
+                content = content.replace(/^\s*\- (.+)/gm, '<li>$1</li>');
+                // Paragraphs
+                content = content.replace(/\n\n/g, '<br><br>');
+            }
+
+            messageElement.innerHTML = content;
+            chatHistory.appendChild(messageElement);
+
+            // Scroll to bottom
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Display source chunks
+        function displaySources(chunks) {
+            if (!chunks || chunks.length === 0) {
+                sources.innerHTML = '<p>No relevant sources found</p>';
+                return;
+            }
+
+            let sourcesHtml = '<ul>';
+            chunks.forEach((chunk, index) => {
+                sourcesHtml += `
+                    <li>
+                        <strong>${chunk.document_title}</strong>
+                        <div>Relevance: ${(chunk.similarity_score * 100).toFixed(1)}%</div>
+                        <p>${chunk.content_excerpt}</p>
+                    </li>
+                `;
+            });
+            sourcesHtml += '</ul>';
+
+            sources.innerHTML = sourcesHtml;
+        }
+
+        // Initialize
+        function initialize() {
+            // Check for existing session ID in local storage
+            const savedSessionId = localStorage.getItem('ragSessionId');
+            if (savedSessionId) {
+                sessionId = savedSessionId;
+                sessionInfo.textContent = `Active Session: ${sessionId}`;
+                loadDocuments();
+            }
+        }
+
+        // Run initialize on page load
+        initialize();
+    </script>
+</body>
+</html>

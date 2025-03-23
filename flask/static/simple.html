@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple PDF Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .upload-section, .query-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .result-section {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        input[type="file"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 0 5px 5px 5px;
+            background-color: #fff;
+            margin-top: -1px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            display: none;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple PDF Processor</h1>
+    <p>Upload a PDF file to extract its content and generate lecture notes. No session ID required.</p>
+
+    <div class="container">
+        <div class="upload-section">
+            <h2>Upload a PDF</h2>
+            <form id="uploadForm">
+                <input type="file" id="pdfFile" accept=".pdf" required>
+                <button type="submit">Process PDF</button>
+            </form>
+            <div class="loader" id="uploadLoader"></div>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <div class="query-section">
+            <h2>Ask Questions</h2>
+            <form id="questionForm">
+                <input type="text" id="pdfPath" placeholder="PDF Path (from result)" required>
+                <textarea id="question" placeholder="Enter your question about the PDF" required></textarea>
+                <button type="submit">Ask Question</button>
+            </form>
+            <div class="loader" id="questionLoader"></div>
+            <div id="questionStatus"></div>
+        </div>
+    </div>
+
+    <div class="result-section">
+        <div class="tabs">
+            <div class="tab active" onclick="openTab(event, 'processResult')">Process Result</div>
+            <div class="tab" onclick="openTab(event, 'extractedText')">Extracted Text</div>
+            <div class="tab" onclick="openTab(event, 'lectureNotes')">Lecture Notes</div>
+            <div class="tab" onclick="openTab(event, 'questionAnswer')">Q&A</div>
+        </div>
+
+        <div id="processResult" class="tab-content active">
+            <h3>Process Result</h3>
+            <pre id="processResultContent">Waiting for processing...</pre>
+        </div>
+
+        <div id="extractedText" class="tab-content">
+            <h3>Extracted Text</h3>
+            <pre id="extractedTextContent">Waiting for processing...</pre>
+        </div>
+
+        <div id="lectureNotes" class="tab-content">
+            <h3>Lecture Notes</h3>
+            <div id="lectureNotesContent">Waiting for processing...</div>
+        </div>
+
+        <div id="questionAnswer" class="tab-content">
+            <h3>Question & Answer</h3>
+            <div id="questionContent"></div>
+            <div id="answerContent"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('pdfFile');
+            if (!fileInput.files[0]) {
+                alert('Please select a PDF file.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Show loader
+            const loader = document.getElementById('uploadLoader');
+            loader.style.display = 'block';
+
+            const uploadStatus = document.getElementById('uploadStatus');
+            uploadStatus.innerHTML = '<p>Processing PDF... This may take a few minutes for larger files.</p>';
+
+            try {
+                const response = await fetch('/process-pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    uploadStatus.innerHTML = `<p style="color:green">${data.message}</p>`;
+
+                    // Fill in PDF path for question form
+                    document.getElementById('pdfPath').value = data.file_paths.original_pdf;
+
+                    // Display result in the tabs
+                    document.getElementById('processResultContent').textContent = JSON.stringify(data, null, 2);
+                    document.getElementById('extractedTextContent').textContent = data.text_preview;
+
+                    // Use markdown for lecture notes
+                    const lectureHTML = data.lecture_preview
+                        .replace(/# (.*)/g, '<h1>$1</h1>')
+                        .replace(/## (.*)/g, '<h2>$1</h2>')
+                        .replace(/### (.*)/g, '<h3>$1</h3>')
+                        .replace(/\n- (.*)/g, '\n<li>$1</li>')
+                        .replace(/\n\n/g, '<br><br>');
+
+                    document.getElementById('lectureNotesContent').innerHTML = lectureHTML;
+                } else {
+                    uploadStatus.innerHTML = `<p style="color:red">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Error uploading document:', error);
+                uploadStatus.innerHTML = `<p style="color:red">Upload failed: ${error.message}</p>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+
+        document.getElementById('questionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const pdfPath = document.getElementById('pdfPath').value;
+            const question = document.getElementById('question').value;
+
+            if (!pdfPath || !question) {
+                alert('Please enter both the PDF path and your question.');
+                return;
+            }
+
+            // Show loader
+            const loader = document.getElementById('questionLoader');
+            loader.style.display = 'block';
+
+            const questionStatus = document.getElementById('questionStatus');
+            questionStatus.innerHTML = '<p>Processing question... This may take a few moments.</p>';
+
+            try {
+                const response = await fetch('/ask-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pdf_path: pdfPath,
+                        question: question
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    questionStatus.innerHTML = `<p style="color:green">Question answered successfully!</p>`;
+
+                    // Display Q&A in the tab
+                    document.getElementById('questionContent').innerHTML = `<p><strong>Q:</strong> ${data.question}</p>`;
+
+                    const answerHTML = data.answer
+                        .replace(/# (.*)/g, '<h1>$1</h1>')
+                        .replace(/## (.*)/g, '<h2>$1</h2>')
+                        .replace(/### (.*)/g, '<h3>$1</h3>')
+                        .replace(/\n- (.*)/g, '\n<li>$1</li>')
+                        .replace(/\n\n/g, '<br><br>');
+
+                    document.getElementById('answerContent').innerHTML = `<p><strong>A:</strong> ${answerHTML}</p>`;
+
+                    // Switch to Q&A tab
+                    openTab(null, 'questionAnswer');
+                } else {
+                    questionStatus.innerHTML = `<p style="color:red">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Error asking question:', error);
+                questionStatus.innerHTML = `<p style="color:red">Question failed: ${error.message}</p>`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+
+        function openTab(evt, tabName) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].className = tabContents[i].className.replace(" active", "");
+            }
+
+            const tabs = document.getElementsByClassName("tab");
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].className = tabs[i].className.replace(" active", "");
+            }
+
+            document.getElementById(tabName).className += " active";
+
+            if (evt) {
+                evt.currentTarget.className += " active";
+            } else {
+                // If event is null, find and activate the corresponding tab
+                for (let i = 0; i < tabs.length; i++) {
+                    if (tabs[i].textContent.includes(tabName)) {
+                        tabs[i].className += " active";
+                        break;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

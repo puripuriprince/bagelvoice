@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notebook RAG API Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .endpoint {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .method {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .get {
+            background-color: #61affe;
+        }
+        .post {
+            background-color: #49cc90;
+        }
+        .delete {
+            background-color: #f93e3e;
+        }
+        .url {
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        pre {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: monospace;
+        }
+        .example {
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        nav {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        nav a {
+            margin-right: 15px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Notebook RAG API Documentation</h1>
+        <p>API documentation for the Notebook RAG system</p>
+    </header>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="#sessions">Sessions</a>
+        <a href="#documents">Documents</a>
+        <a href="#rag">RAG Queries</a>
+    </nav>
+
+    <h2 id="sessions">Session Management</h2>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="url">/api/sessions</span>
+        <p>Create a new user session</p>
+
+        <h3>Request Body</h3>
+        <pre><code>{
+  "user_info": {
+    "name": "User Name",
+    "email": "user@example.com",
+    "topic": "Session Topic"
+  }
+}</code></pre>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "success": true,
+  "message": "Session created successfully",
+  "session_id": "session_12345abcde",
+  "user_info": {
+    "name": "User Name",
+    "email": "user@example.com",
+    "topic": "Session Topic"
+  }
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="url">/api/sessions/{session_id}</span>
+        <p>Get information about a session</p>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "session_id": "session_12345abcde",
+  "user_info": {
+    "name": "User Name",
+    "email": "user@example.com",
+    "topic": "Session Topic"
+  },
+  "documents": {...},
+  "conversation": [...]
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method delete">DELETE</span>
+        <span class="url">/api/sessions/{session_id}</span>
+        <p>End a session</p>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "success": true,
+  "message": "Session ended successfully"
+}</code></pre>
+    </div>
+
+    <h2 id="documents">Document Management</h2>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="url">/api/process-document</span>
+        <p>Upload and process a document for RAG</p>
+
+        <h3>Request</h3>
+        <p>Form data with fields:</p>
+        <ul>
+            <li><code>file</code>: The file to upload (PDF or TXT)</li>
+            <li><code>session_id</code>: The session ID</li>
+        </ul>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "success": true,
+  "message": "Document processed and added to vector store",
+  "document_id": "doc_12345abcde"
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="url">/api/documents?session_id={session_id}</span>
+        <p>List documents for a session</p>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "documents": [
+    {
+      "document_id": "doc_12345abcde",
+      "title": "Example Document",
+      "source_path": "/path/to/document.pdf",
+      "metadata": {...},
+      "created_at": "2023-06-15T14:30:45.123Z"
+    },
+    ...
+  ]
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method get">GET</span>
+        <span class="url">/api/documents/{document_id}</span>
+        <p>Get document details and content</p>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "document_id": "doc_12345abcde",
+  "title": "Example Document",
+  "content": "Full document content...",
+  "chunk_count": 5
+}</code></pre>
+    </div>
+
+    <h2 id="rag">RAG Queries</h2>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="url">/api/rag</span>
+        <p>Perform a RAG query using the vector store and LLM</p>
+
+        <h3>Request Body</h3>
+        <pre><code>{
+  "query": "What is the main topic of the document?",
+  "session_id": "session_12345abcde",
+  "document_id": "doc_12345abcde" // Optional
+}</code></pre>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "answer": "The main topic of the document is...",
+  "chunks": [
+    {
+      "document_id": "doc_12345abcde",
+      "document_title": "Example Document",
+      "content_excerpt": "First 200 characters of the chunk...",
+      "similarity_score": 0.92
+    },
+    ...
+  ]
+}</code></pre>
+    </div>
+
+    <div class="endpoint">
+        <span class="method post">POST</span>
+        <span class="url">/api/chat/rag</span>
+        <p>Chat with RAG enhancement - uses conversation history</p>
+
+        <h3>Request Body</h3>
+        <pre><code>{
+  "message": "What does the document say about...",
+  "session_id": "session_12345abcde"
+}</code></pre>
+
+        <h3>Response</h3>
+        <pre><code>{
+  "message": "Based on the document...",
+  "session_id": "session_12345abcde",
+  "conversation_id": 3,
+  "chunks": [...]
+}</code></pre>
+    </div>
+
+    <footer>
+        <p>&copy; 2023 Notebook RAG System</p>
+        <p><a href="/">Back to Home</a></p>
+    </footer>
+</body>
+</html>

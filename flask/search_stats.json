@@ -1,0 +1,44 @@
+{
+  "document_id": "doc_299d71c2b6",
+  "queries": [
+    {
+      "query": "queues",
+      "result_count": 0,
+      "search_time": 0.2175889015197754,
+      "endpoint": "http://localhost:5000/api/v1/search"
+    },
+    {
+      "query": "queues",
+      "result_count": 0,
+      "search_time": 0.18584871292114258,
+      "endpoint": "http://localhost:5000/api/v1/search"
+    },
+    {
+      "query": "queues",
+      "result_count": 0,
+      "search_time": 0.18748736381530762,
+      "endpoint": "http://localhost:5000/api/v1/search"
+    },
+    {
+      "query": "main topic",
+      "result_count": 0,
+      "search_time": 0.19224095344543457,
+      "endpoint": "http://localhost:5000/api/v1/search"
+    },
+    {
+      "query": "important concepts",
+      "result_count": 0,
+      "search_time": 0.2061300277709961,
+      "endpoint": "http://localhost:5000/api/v1/search"
+    },
+    {
+      "query": "key findings",
+      "result_count": 0,
+      "search_time": 0.20117902755737305,
+      "endpoint": "http://localhost:5000/api/v1/search"
+    }
+  ],
+  "avg_results": 0.0,
+  "avg_search_time": 0.19841249783833823,
+  "timestamp": 1742689524.6442518
+}
