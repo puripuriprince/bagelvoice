@@ -268,7 +268,7 @@ In computers, this happens when different programs or processes are waiting for 
 									className="border rounded-lg w-full overflow-auto"
 									ref={messagesContainerRef}
 									style={{
-										height: "calc(100vh - 200px)",
+										height: "calc(100vh - 250px)",
 									}}
 								>
 									<div className="p-4 text-white/50">
