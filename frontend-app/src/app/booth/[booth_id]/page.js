@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import useSourcesStore from "@/stores/useSourcesStore";
 import {
+	ArrowUturnLeftIcon,
 	Bars3Icon,
 	DocumentIcon,
 	DocumentPlusIcon,
@@ -40,6 +41,10 @@ import {
 	DialogClose,
 } from "@/components/ui/dialog";
 import { Card, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import useChatStore from "@/stores/useChatStore";
+import { useEffect, useRef, useState } from "react";
+import Message from "./Message";
 
 export default function BoothPage() {
 	const { booth_id } = useParams();
@@ -49,11 +54,105 @@ export default function BoothPage() {
 	);
 	const callReceiver = useCallStore(state => state.callReceiver);
 	const setCallReceiver = useCallStore(state => state.setCallReceiver);
+	const messages = useChatStore(state => state.messages);
+	const messagesContainerRef = useRef(null);
+	const isStarted = useChatStore(state => state.isStarted);
+	const setIsStarted = useChatStore(state => state.setIsStarted);
+	const chatSummary = useChatStore(state => state.chatSummary);
+	const setChatSummary = useChatStore(state => state.setChatSummary);
+	const addMessage = useChatStore(state => state.addMessage);
+	const setSources = useSourcesStore(state => state.setSources);
 
+	function handleStartStudying() {
+		// TODO: Fetch the summary from the sources
+		setTimeout(() => {
+			setChatSummary(
+				`
+Deadlocks Summary:
+
+    Liveness: A system must ensure that processes make progress. Indefinite waiting (like waiting for a mutex or semaphore forever) is a liveness failure.
+
+    Deadlock: Happens when two or more processes wait indefinitely for an event that only one of them can trigger. Example:
+
+        P₀ locks S and waits for Q.
+
+        P₁ locks Q and waits for S.
+
+        Neither can proceed, causing a deadlock.
+
+    Other related issues:
+
+        Starvation: A process may never get a needed resource if others keep taking priority.
+
+        Priority Inversion: A high-priority process gets blocked because a lower-priority process holds a required lock. Solved using priority inheritance.
+`.trim(),
+			);
+		}, 1000);
+
+		setIsStarted(true);
+	}
+
+	const [chatBoxInput, setChatBoxInput] = useState("");
+
+	function handleSendMessage() {
+		if (chatBoxInput === "") return;
+
+		addMessage("Me", chatBoxInput);
+		setChatBoxInput("");
+		setTimeout(() => {
+			addMessage(
+				"James",
+				`
+Alright! Imagine you and your friend are playing with toy cars. You each have one car, but you both want the same second car to complete your race.
+
+    You are holding Car A and waiting for Car B.
+
+    Your friend is holding Car B and waiting for Car A.
+
+But neither of you wants to let go of your car first! So now, both of you are stuck, unable to play. This is a deadlock—no one can move forward because each person is waiting for something the other won’t give up.
+
+In computers, this happens when different programs or processes are waiting for resources (like memory, files, or devices) that another process is holding, and no one can continue.
+`.trim(),
+				"/test-video.mp4",
+			);
+		}, 2000);
+	}
+
+	useEffect(() => {
+		if (messagesContainerRef.current) {
+			messagesContainerRef.current.scrollTop =
+				messagesContainerRef.current.scrollHeight;
+		}
+	}, [messages]); // Dependency array includes messages so it runs when messages update
+
+	useEffect(() => {
+		// FETCH THE SOURCES
+		setSources([
+			{
+				id: 1,
+				name: "Deadlocks",
+				selected: true,
+			},
+			{
+				id: 2,
+				name: "Starvation",
+				selected: true,
+			},
+			{
+				id: 3,
+				name: "Priority Inversion",
+				selected: true,
+			},
+		]);
+	}, []);
+
+	if (!booth) return null;
 	return (
 		<div className="h-full flex flex-col">
 			<h1 className="border-b p-6 flex items-center gap-6 text-2xl font-bold">
-				<Bars3Icon className="w-8 h-8" />
+				<Link href="/">
+					<ArrowUturnLeftIcon className="w-8 h-8 cursor-pointer" />
+				</Link>
 				{booth.name}
 			</h1>
 			<div className="flex grow">
@@ -78,119 +177,84 @@ export default function BoothPage() {
 						</DropdownMenu>
 					</div>
 					<div className="px-6 mt-2">
-						<p className="text-white/50">
-							Select the sources to include
-						</p>
 						{sources.length === 0 ? (
-							<div></div>
+							<div className="text-white/50">
+								Please add sources to continue
+							</div>
 						) : (
-							<SourceList sources={sources} />
+							<>
+								<p className="text-white/50">
+									Select the sources to include
+								</p>
+								<SourceList sources={sources} />
+								{!isStarted && (
+									<Button
+										className={"w-full mt-4"}
+										onClick={handleStartStudying}
+									>
+										Start Studying
+									</Button>
+								)}
+							</>
 						)}
 					</div>
 				</div>
 				<div className="grow flex flex-col">
-					<div className="px-4 pt-4 grow">
-						<div
-							className="border rounded-lg w-full overflow-auto"
-							style={{
-								height: "calc(100vh - 200px)",
-							}}
-						>
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<h2 className="font-bold text-green-400">
-										Me
-									</h2>
+					{isStarted ? (
+						<>
+							<div className="px-4 pt-4 grow">
+								<div
+									className="border rounded-lg w-full overflow-auto"
+									ref={messagesContainerRef}
+									style={{
+										height: "calc(100vh - 200px)",
+									}}
+								>
+									<div className="p-4 text-white/50">
+										<p>
+											{chatSummary === ""
+												? "Summary is being generated, please wait ..."
+												: chatSummary}
+										</p>
+									</div>
+									<hr className="mx-4" />
+									{messages.map(message => (
+										<Message
+											message={message}
+											key={message.id}
+										/>
+									))}
 								</div>
-								<p className="mt-2">
-									Hi, how is your day doing?
-								</p>
 							</div>
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<img className="rounded-full w-12 h-12 bg-white" />
-									<h2 className="font-bold">Alex</h2>
-								</div>
-								<p className="mt-2">
-									Hey! My day's going great—thanks for asking.
-									How about you? Working on anything
-									interesting today? 😊
-								</p>
+							<div className="text-end text-white/80 my-1 me-4 font-semibold">
+								{sources.reduce(
+									(acc, x) => acc + (x.selected ? 1 : 0),
+									0,
+								)}{" "}
+								sources selected
 							</div>
-
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<h2 className="font-bold text-green-400">
-										Me
-									</h2>
-								</div>
-								<p className="mt-2">
-									not sure, can you tell me more about what i
-									should do in life
-								</p>
+							<div className="min-h-10 w-full px-4 pb-4 flex gap-2">
+								<Textarea
+									className="h-full"
+									value={chatBoxInput}
+									onChange={e =>
+										setChatBoxInput(e.target.value)
+									}
+								/>
+								<Button
+									className="w-20 h-full"
+									onClick={handleSendMessage}
+								>
+									<PaperAirplaneIcon className="w-6 h-6" />
+								</Button>
 							</div>
-
-							<div className="p-4">
-								<div className="flex gap-4 items-center">
-									<img className="rounded-full w-12 h-12 bg-white" />
-									<h2 className="font-bold">Alex</h2>
-								</div>
-								<p className="mt-2">
-									That’s a really deep question! Figuring out
-									what to do in life can feel overwhelming at
-									times, but it’s also a chance to explore
-									what excites you. Here are a few things that
-									might help guide you in finding direction:
-									Identify What You're Passionate About: Think
-									about what excites you. Whether it's
-									technology, art, helping others, or
-									something else, knowing what you’re
-									passionate about can give you a sense of
-									purpose. Set Small Goals: Sometimes, big
-									goals can be intimidating. Start by setting
-									smaller, achievable goals that can gradually
-									lead you toward your bigger dreams. Learn
-									Continuously: Life is full of learning
-									opportunities. Whether it's through school,
-									hobbies, or life experiences, gaining new
-									skills and knowledge is a great way to grow.
-									Explore Different Paths: It’s okay to not
-									have it all figured out. Try different
-									things, whether through internships, side
-									projects, or new hobbies. Exploration can
-									help you discover things you never thought
-									you'd enjoy. Be Open to Change: Life is
-									unpredictable. Be open to changing
-									directions as you grow and learn more about
-									yourself. Sometimes, the best opportunities
-									come from unexpected places. Take Care of
-									Yourself: Don’t forget to nurture your
-									physical and mental health. Life can be
-									busy, but feeling good is essential to
-									living well. Impact and Meaning: Think about
-									what kind of impact you want to make. It
-									could be through work, relationships, or
-									contributing to something bigger than
-									yourself. Do any of these resonate with you?
-									Sometimes just thinking about what feels
-									meaningful can spark new ideas.
-								</p>
-							</div>
+						</>
+					) : (
+						<div className="text-4xl text-white/50 flex items-center justify-center h-full p-10 text-center">
+							Select sources and start studying to see the chat
+							menu.
 						</div>
-					</div>
-					<div className="text-end text-white/80 my-1 me-4 font-semibold">
-						{sources.reduce(
-							(acc, x) => acc + (x.selected ? 1 : 0),
-							0,
-						)}{" "}
-						sources selected
-					</div>
-					<div className="min-h-10 w-full px-4 pb-4 flex gap-2">
-						<Textarea className="h-full" />
-						<Button className="w-20 h-full">
-							<PaperAirplaneIcon className="w-6 h-6" />
-						</Button>
-					</div>
+					)}
 				</div>
 				<div className="border-s p-6 min-w-xs w-xs">
 					<div className="font-bold text-xl">
