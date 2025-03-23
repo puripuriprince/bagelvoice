@@ -29,56 +29,56 @@ const useChatStore = create((set, get) => ({
 		},
 	],
 
-	// Add streaming functionality
-	streamMessage: (user, fullMessage) => {
-		// Create a new message with empty content
-		const newId = get().messages.length + 1;
-		set(state => ({
-			messages: [...state.messages, { id: newId, user, message: "" }],
-		}));
-
-		// Split the message into words
-		const words = fullMessage.split(" ");
-		let currentIndex = 0;
-
-		// Set up interval to add words
-		const intervalId = setInterval(() => {
-			if (currentIndex < words.length) {
-				// Get the current messages
-				const currentMessages = get().messages;
-				const lastMessage = currentMessages[currentMessages.length - 1];
-
-				// Add the next word (with a space if not the first word)
-				const updatedMessage =
-					lastMessage.message === ""
-						? words[currentIndex]
-						: lastMessage.message + " " + words[currentIndex];
-
-				// Update the message
-				set(state => ({
-					messages: state.messages.map(msg =>
-						msg.id === newId
-							? { ...msg, message: updatedMessage }
-							: msg,
-					),
-				}));
-
-				currentIndex++;
-			} else {
-				// Clear interval when all words have been added
-				clearInterval(intervalId);
-			}
-		}, 100);
-
-		// Return a function to cancel streaming if needed
-		return () => clearInterval(intervalId);
-	},
+	//// Add streaming functionality
+	//streamMessage: (user, fullMessage) => {
+	//	// Create a new message with empty content
+	//	const newId = get().messages.length + 1;
+	//	set(state => ({
+	//		messages: [...state.messages, { id: newId, user, message: "" }],
+	//	}));
+	//
+	//	// Split the message into words
+	//	const words = fullMessage.split(" ");
+	//	let currentIndex = 0;
+	//
+	//	// Set up interval to add words
+	//	const intervalId = setInterval(() => {
+	//		if (currentIndex < words.length) {
+	//			// Get the current messages
+	//			const currentMessages = get().messages;
+	//			const lastMessage = currentMessages[currentMessages.length - 1];
+	//
+	//			// Add the next word (with a space if not the first word)
+	//			const updatedMessage =
+	//				lastMessage.message === ""
+	//					? words[currentIndex]
+	//					: lastMessage.message + " " + words[currentIndex];
+	//
+	//			// Update the message
+	//			set(state => ({
+	//				messages: state.messages.map(msg =>
+	//					msg.id === newId
+	//						? { ...msg, message: updatedMessage }
+	//						: msg,
+	//				),
+	//			}));
+	//
+	//			currentIndex++;
+	//		} else {
+	//			// Clear interval when all words have been added
+	//			clearInterval(intervalId);
+	//		}
+	//	}, 100);
+	//
+	//	// Return a function to cancel streaming if needed
+	//	return () => clearInterval(intervalId);
+	//},
 }));
 
-useChatStore
-	.getState()
-	.streamMessage(
-		"Alex",
-		"This is a test message that will appear word by word every 100 milliseconds to simulate a streaming effect for your chat interface. This message is quite long, so it should take a while to fully appear. Enjoy! 😊 this is about 1000 words. So, it should take about 10 seconds to fully appear.",
-	);
+//useChatStore
+//	.getState()
+//	.streamMessage(
+//		"Alex",
+//		"This is a test message that will appear word by word every 100 milliseconds to simulate a streaming effect for your chat interface. This message is quite long, so it should take a while to fully appear. Enjoy! 😊 this is about 1000 words. So, it should take about 10 seconds to fully appear.",
+//	);
 export default useChatStore;

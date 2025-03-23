@@ -63,6 +63,7 @@ export default function BoothPage() {
 		}
 	}, [messages]); // Dependency array includes messages so it runs when messages update
 
+	if (!booth) return null;
 	return (
 		<div className="h-full flex flex-col">
 			<h1 className="border-b p-6 flex items-center gap-6 text-2xl font-bold">
