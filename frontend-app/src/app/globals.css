@@ -126,3 +126,150 @@ body {
 	width: 100%;
 	height: 100%;
 }
+
+/* Add this to your global CSS file */
+
+.markdown-content {
+	/* General typography */
+	line-height: 1.6;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+}
+
+/* Headings */
+.markdown-content h1 {
+	font-size: 1.75rem;
+	font-weight: 700;
+	margin-top: 1.5rem;
+	margin-bottom: 1rem;
+}
+
+.markdown-content h2 {
+	font-size: 1.5rem;
+	font-weight: 700;
+	margin-top: 1.4rem;
+	margin-bottom: 0.8rem;
+}
+
+.markdown-content h3 {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-top: 1.3rem;
+	margin-bottom: 0.6rem;
+}
+
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+	font-size: 1.1rem;
+	font-weight: 600;
+	margin-top: 1.2rem;
+	margin-bottom: 0.5rem;
+}
+
+/* Lists */
+.markdown-content ul,
+.markdown-content ol {
+	padding-left: 1.5rem;
+	margin-top: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.markdown-content ul {
+	list-style-type: disc;
+}
+
+.markdown-content ol {
+	list-style-type: decimal;
+}
+
+.markdown-content li {
+	margin-bottom: 0.25rem;
+}
+
+.markdown-content li > ul,
+.markdown-content li > ol {
+	margin-top: 0.25rem;
+	margin-bottom: 0.25rem;
+}
+
+/* Paragraphs and spacing */
+.markdown-content p {
+	margin-top: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+/* Code blocks */
+.markdown-content pre {
+	background-color: rgba(0, 0, 0, 0.2);
+	border-radius: 0.375rem;
+	padding: 1rem;
+	overflow-x: auto;
+	margin: 0.75rem 0;
+}
+
+.markdown-content code {
+	background-color: rgba(0, 0, 0, 0.2);
+	border-radius: 0.25rem;
+	padding: 0.2rem 0.4rem;
+	font-family: monospace;
+}
+
+.markdown-content pre code {
+	background-color: transparent;
+	padding: 0;
+}
+
+/* Tables */
+.markdown-content table {
+	border-collapse: collapse;
+	margin: 1rem 0;
+	width: 100%;
+}
+
+.markdown-content th,
+.markdown-content td {
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 0.5rem;
+}
+
+.markdown-content th {
+	background-color: rgba(255, 255, 255, 0.1);
+	font-weight: 600;
+}
+
+/* Quotes */
+.markdown-content blockquote {
+	border-left: 4px solid rgba(255, 255, 255, 0.3);
+	padding-left: 1rem;
+	margin-left: 0;
+	margin-right: 0;
+	font-style: italic;
+}
+
+/* Horizontal rule */
+.markdown-content hr {
+	border: 0;
+	height: 1px;
+	background-color: rgba(255, 255, 255, 0.2);
+	margin: 1.5rem 0;
+}
+
+/* Images */
+.markdown-content img {
+	max-width: 100%;
+	height: auto;
+	border-radius: 0.375rem;
+}
+
+/* LaTeX specific styling */
+.katex-display {
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 0.5rem 0;
+}
+
+/* LaTeX inline */
+.katex {
+	font-size: 1.1em;
+}

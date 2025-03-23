@@ -1,4 +1,30 @@
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypeSanitize from "rehype-sanitize";
+import "katex/dist/katex.min.css";
+
+// Helper function to check if a message might contain incomplete LaTeX
+const containsIncompleteLatex = text => {
+	if (!text) return false;
+
+	// Check for unmatched $ symbols which might indicate incomplete LaTeX
+	const dollarCount = (text.match(/\$/g) || []).length;
+	if (dollarCount % 2 !== 0) return true;
+
+	// Check for potentially incomplete LaTeX commands/environments
+	const openBraces = (text.match(/\{/g) || []).length;
+	const closeBraces = (text.match(/\}/g) || []).length;
+	if (openBraces !== closeBraces) return true;
+
+	// Check for incomplete \begin{...} \end{...} pairs
+	const beginCount = (text.match(/\\begin\{/g) || []).length;
+	const endCount = (text.match(/\\end\{/g) || []).length;
+	if (beginCount !== endCount) return true;
+
+	return false;
+};
 
 export default function Message({ message }) {
 	const [videoExists, setVideoExists] = useState(false);
@@ -20,14 +46,34 @@ export default function Message({ message }) {
 					setVideoExists(false);
 				}
 			};
-
 			const intervalId = setInterval(checkVideoExistence, 5000); // Poll every 5 seconds
 			checkVideoExistence(); // Check immediately as well
-
 			// Cleanup interval on component unmount or when video is found
 			return () => clearInterval(intervalId);
 		}
 	}, [message.video]);
+
+	// Function to render message content with Markdown and LaTeX support
+	const renderMessageContent = () => {
+		// If message is potentially streaming and has incomplete LaTeX, render as plain text
+		if (message.isStreaming && containsIncompleteLatex(message.message)) {
+			return (
+				<p className="mt-2 whitespace-pre-wrap">{message.message}</p>
+			);
+		}
+
+		return (
+			<div className="mt-2 markdown-content">
+				<ReactMarkdown
+					key={message.message}
+					remarkPlugins={[remarkMath]}
+					rehypePlugins={[rehypeKatex, rehypeSanitize]}
+				>
+					{message.message || ""}
+				</ReactMarkdown>
+			</div>
+		);
+	};
 
 	return (
 		<div className="p-4" key={message.id}>
@@ -39,9 +85,16 @@ export default function Message({ message }) {
 					className={`font-bold ${message.user === "Me" && "text-green-400"}`}
 				>
 					{message.user}
+					{message.isStreaming && (
+						<span className="text-xs ms-2 text-yellow-400">
+							(typing...)
+						</span>
+					)}
 				</h2>
 			</div>
-			<p className="mt-2">{message.message}</p>
+
+			{renderMessageContent()}
+
 			{message.video && videoExists && (
 				<video
 					type="video/mp4"
