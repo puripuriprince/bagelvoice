@@ -51,7 +51,7 @@ const useSourcesStore = create(set => ({
 			sources: [
 				...state.sources,
 				{
-					id: Math.max(...state.sources.map(s => s.id)) + 1,
+					id: Math.random(),
 					selected: true,
 					...source,
 				},

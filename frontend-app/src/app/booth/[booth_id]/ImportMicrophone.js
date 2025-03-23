@@ -140,15 +140,15 @@ export default function ImportMicrophone() {
 
 			if (response.ok) {
 				const data = await response.json();
-				alert("Upload successful!");
+				//alert("Upload successful!");
 				console.log("Server response:", data);
 				// Close the dialog or perform additional actions
 			} else {
 				throw new Error("Upload failed");
 			}
 		} catch (error) {
-			console.error("Error uploading file:", error);
-			alert("There was an error uploading your file. Please try again.");
+			//console.error("Error uploading file:", error);
+			//alert("There was an error uploading your file. Please try again.");
 		}
 	};
 

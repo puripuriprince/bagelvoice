@@ -153,13 +153,15 @@ In computers, this happens when different programs or processes are waiting for 
 						</DropdownMenu>
 					</div>
 					<div className="px-6 mt-2">
-						<p className="text-white/50">
-							Select the sources to include
-						</p>
 						{sources.length === 0 ? (
-							<div></div>
+							<div className="text-white/50">
+								Please add sources to continue
+							</div>
 						) : (
 							<>
+								<p className="text-white/50">
+									Select the sources to include
+								</p>
 								<SourceList sources={sources} />
 								{!isStarted && (
 									<Button
